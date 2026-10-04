@@ -5,7 +5,7 @@ are read off the C definitions (``parse.c`` lines 103-153) for plays whose answe
 """
 
 import pytest
-from retrosheetpy.cw.parse import (
+from chadwickpy.parse import (
     is_official_ab,
     outs_on_play,
     parse_event,

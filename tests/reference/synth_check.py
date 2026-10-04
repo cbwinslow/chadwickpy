@@ -4,7 +4,7 @@
 Development-time only.  ``synth_games.py`` writes random well-formed games that reach Chadwick
 code real seasons never do (hand records, backward advances, pinch hitters, roster-less players).
 Every tool is run with several option sets on the same files, by the real program and by
-``python -m retrosheetpy.cw``.
+``python -m chadwickpy``.
 
     python synth_check.py FIRST_SEED LAST_SEED [--gcov-bin DIR] [--cov PREFIX] [--keep DIR]
 
@@ -84,12 +84,12 @@ def one(
         for tool, args in CASES:
             argv = ["-q", "-y", str(YEAR), *args, f"{YEAR}XXX.EVN"]
             real = run([_real(tool), *argv], work)
-            port_cmd = [sys.executable, "-m", "retrosheetpy.cw", tool, *argv]
+            port_cmd = [sys.executable, "-m", "chadwickpy", tool, *argv]
             if cov:
                 port_cmd = [
                     sys.executable, "-m", "coverage", "run", "--parallel-mode",
-                    f"--data-file={cov}", "--branch", "--include=*/retrosheetpy/*",
-                    "-m", "retrosheetpy.cw", tool, *argv,
+                    f"--data-file={cov}", "--branch", "--include=*/chadwickpy/*",
+                    "-m", "chadwickpy", tool, *argv,
                 ]  # fmt: skip
             port = run(port_cmd, work)
             if gcov_bin is not None:

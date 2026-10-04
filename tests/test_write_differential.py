@@ -12,7 +12,7 @@ import subprocess
 from pathlib import Path
 
 import pytest
-from retrosheetpy.cw.game import read_games
+from chadwickpy.game import read_games
 from test_reader_differential import (
     FIXTURES,
     HERE,

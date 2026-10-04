@@ -1,0 +1,117 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CHADWICK_REF: c685ab5
+
+jobs:
+  lint:
+    name: lint and types
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          python-version: "3.12"
+          enable-cache: true
+      - run: uvx ruff check .
+      - run: uvx ruff format --check .
+      - run: uvx mypy --strict src
+
+  parity:
+    name: parity with Chadwick (py${{ matrix.python }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0 # hatch-vcs reads the version from git tags
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          python-version: ${{ matrix.python }}
+          enable-cache: true
+      - name: Cache Chadwick (sources and build)
+        id: chadwick-cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/chadwick-parity
+            ~/chadwick-parity-install
+          key: chadwick-parity-${{ env.CHADWICK_REF }}
+      - name: Build Chadwick at the pinned commit
+        if: steps.chadwick-cache.outputs.cache-hit != 'true'
+        run: |
+          sudo apt-get install -y -q autoconf automake libtool
+          git clone https://github.com/chadwickbureau/chadwick.git "$HOME/chadwick-parity"
+          cd "$HOME/chadwick-parity"
+          git checkout "$CHADWICK_REF"
+          autoreconf -i
+          ./configure --prefix="$HOME/chadwick-parity-install"
+          make -j2
+          make install
+      - name: Run the tests (they compare with the real tools)
+        run: |
+          export CHADWICK_BIN="$HOME/chadwick-parity-install/bin"
+          export CHADWICK_SRC="$HOME/chadwick-parity/src"
+          test -x "$CHADWICK_BIN/cwevent" || { echo "Chadwick build missing"; exit 1; }
+          uv run --with pytest pytest -q -rs -p no:cacheprovider | tee pytest.out
+          # A skipped parity test compared nothing: with Chadwick built, nothing may be skipped.
+          if grep -q '^SKIPPED' pytest.out; then echo "tests were skipped"; exit 1; fi
+
+  package:
+    name: build and clean-install check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          python-version: "3.12"
+      - run: uv build
+      - name: Install the wheel in a clean venv and run every tool
+        run: |
+          python -m venv /tmp/clean
+          /tmp/clean/bin/pip install dist/*.whl
+          cd /tmp
+          for t in cwevent cwgame cwdaily cwsub cwcomment cwbox chadwickpy; do
+            /tmp/clean/bin/$t -h >/dev/null 2>&1 || /tmp/clean/bin/$t --help >/dev/null 2>&1 || { echo "$t failed"; exit 1; }
+          done
+          /tmp/clean/bin/python -m chadwickpy cwevent -h >/dev/null 2>&1 || true
+          /tmp/clean/bin/python -c "import chadwickpy; print(chadwickpy.__version__)"
+      - run: uvx twine check dist/*
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: dist
+          path: dist/
+
+  # Branch protection requires this one check name.
+  test:
+    name: test
+    needs: [lint, parity, package]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require every job to have succeeded
+        run: |
+          [ "${{ needs.lint.result }}" = success ] && [ "${{ needs.parity.result }}" = success ] \
+            && [ "${{ needs.package.result }}" = success ] || { echo "a job failed"; exit 1; }

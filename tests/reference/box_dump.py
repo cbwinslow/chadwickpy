@@ -4,8 +4,8 @@ import dataclasses
 from collections.abc import Iterator
 from typing import Any
 
-from retrosheetpy.cw.box import BoxEvent, BoxPlayer, Boxscore, box_create
-from retrosheetpy.cw.game import read_games
+from chadwickpy.box import BoxEvent, BoxPlayer, Boxscore, box_create
+from chadwickpy.game import read_games
 
 
 def s(p: str | None) -> str:

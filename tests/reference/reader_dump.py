@@ -8,9 +8,9 @@ import sys
 from collections.abc import Iterable
 from pathlib import Path
 
-from retrosheetpy.cw.book import scorebook_read
-from retrosheetpy.cw.game import Appearance, Comment, Game, read_games
-from retrosheetpy.cw.roster import League, Roster, roster_batting_hand, roster_throwing_hand
+from chadwickpy.book import scorebook_read
+from chadwickpy.game import Appearance, Comment, Game, read_games
+from chadwickpy.roster import League, Roster, roster_batting_hand, roster_throwing_hand
 
 
 def s(p: str | None) -> str:

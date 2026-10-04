@@ -4,7 +4,7 @@
 that reach code real seasons never do: ``padj``/``badj`` hand records, switch hitters, backward
 runner advances, pinch hitters and runners, roster-less players, the DH rules, suspended games,
 box-score-only files. Every tool runs with several option sets, by the real program and by
-``python -m retrosheetpy.cw``: stdout, stderr and exit status must agree. Runs where the C
+``python -m chadwickpy``: stdout, stderr and exit status must agree. Runs where the C
 crashes or reads uninitialised memory are skipped (the port raises or defines the value).
 """
 

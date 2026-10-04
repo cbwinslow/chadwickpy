@@ -2,7 +2,7 @@
 
 Development-time only (needs gcc, the Chadwick sources and a Retrosheet event zip):
 
-    uv run --package retrosheetpy python packages/retrosheetpy/tests/reference/box_season.py \
+    uv run python tests/reference/box_season.py \
         ZIP YEAR [--c-src DIR]
 
 Covers every ``YEARxxx.E??`` file in the zip (play-by-play, deduced and boxscore event files).
@@ -21,7 +21,7 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 
 from box_dump import dump  # noqa: E402
-from retrosheetpy import iter_zip_members  # noqa: E402
+from _zips import iter_zip_members  # noqa: E402
 
 
 def main() -> int:

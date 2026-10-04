@@ -1,8 +1,8 @@
 """Capture ``cwevent`` output with rosters present for the fixtures (needs ``cwevent`` and network).
 
 Run from the repository root:
-    uv run --package retrosheetpy python \
-        packages/retrosheetpy/tests/reference/capture_rosters.py CACHE_DIR
+    uv run python \
+        tests/reference/capture_rosters.py CACHE_DIR
 For each fixture it copies the ``TEAMyyyy`` lines and ``.ROS`` files of the teams in the fixture
 from the season's Retrosheet event zip into ``rosters/<fixture>/`` and stores what ``cwevent``
 prints with them in ``chadwick_rosters/<fixture>.csv``. The hand columns then come from the
@@ -18,7 +18,7 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent))
 
 from chadwick_reference import ChadwickReference  # noqa: E402
-from retrosheetpy import Client, Product, iter_zip_members, resolve  # noqa: E402
+from _zips import decade_zip, iter_zip_members  # noqa: E402
 
 FIXTURES = HERE.parent / "fixtures" / "events"
 ROSTERS = HERE / "rosters"
@@ -29,15 +29,14 @@ def main(cache_dir: str) -> None:
     ref = ChadwickReference.find()
     if ref is None:
         sys.exit("cwevent not found on PATH")
-    client = Client(cache_dir)
-    OUT.mkdir(exist_ok=True)
+        OUT.mkdir(exist_ok=True)
     for evt in sorted(FIXTURES.glob("*.evt")):
         text = evt.read_bytes()
         year = int(re.search(rb"^id,[A-Z0-9]{3}(\d{4})", text, re.M).group(1))  # type: ignore[union-attr]
         teams = {m.decode() for m in re.findall(rb"^info,(?:visteam|hometeam),(\w+)", text, re.M)}
         support: dict[str, bytes] = {}
         try:
-            zip_path = client.download(resolve(Product.EVENTS_DECADE, year)).local_path
+            zip_path = decade_zip(year, cache_dir)
         except ValueError:  # seasons before 1910 are not in a decade archive: no rosters
             zip_path = None
         for name, member in iter_zip_members(zip_path) if zip_path else ():

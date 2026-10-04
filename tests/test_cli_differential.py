@@ -1,6 +1,6 @@
 """The command-line drivers against the real tools: stdout, stderr and exit status, byte for byte.
 
-Each case runs the installed Chadwick binary and ``retrosheetpy.cw.cli.main`` in scratch
+Each case runs the installed Chadwick binary and ``chadwickpy.tools.cli.main`` in scratch
 directories holding the same files (an event file, a team file and rosters synthesised from it)
 and compares everything. Runs only where the Chadwick tools (0.10) are installed.
 """
@@ -15,7 +15,7 @@ import pytest
 HERE = Path(__file__).parent
 sys.path.insert(0, str(HERE))
 from chadwick_tool import real_tool  # noqa: E402
-from retrosheetpy.cw.cli import IO, TOOLS, main  # noqa: E402
+from chadwickpy.tools.cli import IO, TOOLS, main  # noqa: E402
 from test_cwbox_differential import synthetic_rosters, year_of  # noqa: E402
 
 FIXTURES = HERE / "fixtures" / "events"

@@ -1,6 +1,6 @@
 """Dev/test-only adapter around Chadwick's ``cwevent`` (never a runtime dependency).
 
-Chadwick is used only as an independent reference to check ``retrosheetpy``.
+Chadwick is used only as an independent reference to check ``chadwickpy``.
 If the tool is absent, ``ChadwickReference.find()`` returns ``None`` and tests
 that need a live run skip; the captured reference files under
 ``tests/reference/chadwick/`` keep normal CI deterministic without any tools.

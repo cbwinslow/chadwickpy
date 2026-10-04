@@ -4,7 +4,7 @@
 Build the harness:
     gcc -w -g -fsanitize=address,undefined,bounds-strict -fno-sanitize-recover=all -I $CW/cwlib -I $CW parse_dump.c $CW/cwlib/*.c -o parse_dump
 Run (PD = the built harness; SEED then one or more Retrosheet event zips):
-    PD=./parse_dump uv run --package retrosheetpy python parse_fuzz.py SEED ZIP...
+    PD=./parse_dump uv run python parse_fuzz.py SEED ZIP...
 Real play strings, randomly mutated copies and (GRAMMAR=N) N grammar-generated plays are compared on every parsed field. Known
 differences are only garbled ``POCS(...`` plays, where the C writes out of bounds (undefined).
 """
@@ -16,8 +16,8 @@ import sys
 import zipfile
 
 from parse_grammar import generate
-from retrosheetpy.cw.parse import parse_event
-from retrosheetpy.records import is_event_filename
+from chadwickpy.parse import parse_event
+from _zips import is_event_filename
 
 
 def esc(p):

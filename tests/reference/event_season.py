@@ -3,7 +3,7 @@ real team and roster files, and compare bytes (every field and every extended fi
 
 Development-time only (needs ``cwevent`` on PATH and a Retrosheet event zip):
 
-    uv run --package retrosheetpy python packages/retrosheetpy/tests/reference/event_season.py \
+    uv run python tests/reference/event_season.py \
         ZIP YEAR
 
 Exit status 1 if any file differs.
@@ -18,9 +18,9 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent))
 
 from chadwick_tool import run_tool  # noqa: E402
-from retrosheetpy import iter_zip_members  # noqa: E402
-from retrosheetpy.cw.events import event_lines, header_line  # noqa: E402
-from retrosheetpy.cw.tools import read_rosters  # noqa: E402
+from _zips import iter_zip_members  # noqa: E402
+from chadwickpy.tools.events import event_lines, header_line  # noqa: E402
+from chadwickpy.tools.tools import read_rosters  # noqa: E402
 
 ALL, EXT = tuple(range(97)), tuple(range(67))
 

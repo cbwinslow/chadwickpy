@@ -3,7 +3,7 @@ real team and roster files, and compare bytes.
 
 Development-time only (needs ``cwbox`` on PATH and a Retrosheet event zip):
 
-    uv run --package retrosheetpy python packages/retrosheetpy/tests/reference/box_text_season.py \
+    uv run python tests/reference/box_text_season.py \
         ZIP YEAR
 
 Both the text and the XML (``-X``) output are checked. Chadwick's ``cwbox -X`` reads
@@ -32,9 +32,9 @@ from chadwick_tool import (  # noqa: E402
     run_filled,
     run_tool,
 )  # noqa: E402
-from retrosheetpy import iter_zip_members  # noqa: E402
-from retrosheetpy.cw.cwbox import box_text  # noqa: E402
-from retrosheetpy.cw.tools import read_rosters  # noqa: E402
+from _zips import iter_zip_members  # noqa: E402
+from chadwickpy.tools.cwbox import box_text  # noqa: E402
+from chadwickpy.tools.tools import read_rosters  # noqa: E402
 
 PB = re.compile(rb' pb="\d+"')
 DATE_TIME = re.compile(rb' date-time="[^"]*"')

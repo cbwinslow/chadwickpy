@@ -4,7 +4,7 @@ Development-time only. Needs the real Chadwick tools (``real_tool``: ``CHADWICK_
 outside the virtualenv), gcc plus the Chadwick sources (``CHADWICK_SRC``) for ``cwbox -X/-S``, and
 the Retrosheet decade event zips:
 
-    uv run --package retrosheetpy python packages/retrosheetpy/tests/reference/all_years.py \
+    uv run python tests/reference/all_years.py \
         ZIPDIR [--from 1910] [--to 2025] [--jobs 4] [--out DIR]
 
 For each season and each tool the matching ``*_season.py`` script is run (it compares every event
@@ -66,7 +66,7 @@ def run_one(job: tuple[int, str, Path, Path]) -> dict[str, object]:
             "--branch",
             "-p",
             f"--data-file={data}",
-            f"--source={HERE.parents[1] / 'src' / 'retrosheetpy'}",
+            f"--source={HERE.parents[1] / 'src' / 'chadwickpy'}",
         ]
         if data
         else [sys.executable]

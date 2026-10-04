@@ -1,10 +1,10 @@
 """Check that a new season's event files are read completely and cleanly (no Chadwick needed).
 
-    uv run --package retrosheetpy python \
-        packages/retrosheetpy/tests/reference/new_season_guard.py ZIP YEAR
+    uv run python \
+        tests/reference/new_season_guard.py ZIP YEAR
 
 Lists every unparsed play, unknown record, unreadable line and game that was not read. Exit
-status 1 if anything is listed. Run ``season_report.py`` as well when ``cwevent`` is available.
+status 1 if anything is listed. Run ``all_years.py`` as well when ``cwevent`` is available.
 """
 
 import re
@@ -13,9 +13,9 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from retrosheetpy import iter_zip_members  # noqa: E402
-from retrosheetpy.cw.guard import check_event_file  # noqa: E402
-from retrosheetpy.records import is_event_filename  # noqa: E402
+from _zips import iter_zip_members  # noqa: E402
+from chadwickpy.guard import check_event_file  # noqa: E402
+from _zips import is_event_filename  # noqa: E402
 
 
 def main(zip_path: str, year: str) -> int:

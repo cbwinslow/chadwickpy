@@ -2,7 +2,7 @@
 
 Development-time only (needs ``cwdaily`` on PATH and a Retrosheet event zip):
 
-    uv run --package retrosheetpy python packages/retrosheetpy/tests/reference/daily_season.py \
+    uv run python tests/reference/daily_season.py \
         ZIP YEAR
 
 Both output formats (default ascii with header, and ``-ft`` fixed width) are checked.
@@ -18,8 +18,8 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent))
 
 from chadwick_tool import run_tool  # noqa: E402
-from retrosheetpy import iter_zip_members  # noqa: E402
-from retrosheetpy.cw.daily import daily_lines, header_line  # noqa: E402
+from _zips import iter_zip_members  # noqa: E402
+from chadwickpy.tools.daily import daily_lines, header_line  # noqa: E402
 
 
 def main() -> int:

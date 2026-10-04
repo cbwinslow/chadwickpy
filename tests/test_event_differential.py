@@ -14,8 +14,8 @@ import pytest
 HERE = Path(__file__).parent
 sys.path.insert(0, str(HERE))
 from chadwick_tool import build_sanitised, real_tool, run_clean, run_tool  # noqa: E402
-from retrosheetpy.cw.events import DEFAULT_FIELDS, event_lines, header_line  # noqa: E402
-from retrosheetpy.cw.tools import read_rosters  # noqa: E402
+from chadwickpy.tools.events import DEFAULT_FIELDS, event_lines, header_line  # noqa: E402
+from chadwickpy.tools.tools import read_rosters  # noqa: E402
 from test_cwbox_differential import synthetic_rosters, year_of  # noqa: E402
 from test_reader_differential import damage  # noqa: E402
 

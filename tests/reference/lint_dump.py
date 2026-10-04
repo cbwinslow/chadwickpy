@@ -7,8 +7,8 @@ the buffer size), so it gets no newline added; every other message ends in one.
 
 import logging
 
-from retrosheetpy.cw.game import read_games
-from retrosheetpy.cw.lint import game_lint
+from chadwickpy.game import read_games
+from chadwickpy.lint import game_lint
 
 
 class _Stream(logging.Handler):
@@ -26,7 +26,7 @@ class _Stream(logging.Handler):
 
 def dump(data: bytes) -> tuple[list[str], bool]:
     """(lines, crashed): C ``exit``/NULL cases surface as ``ValueError`` in the port."""
-    log = logging.getLogger("retrosheetpy.cw")
+    log = logging.getLogger("chadwickpy")
     stream = _Stream()
     log.addHandler(stream)
     crashed = False

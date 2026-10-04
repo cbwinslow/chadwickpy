@@ -1,26 +1,74 @@
 [project]
-name = "retrosheetpy"
-version = "0.0.1"
-description = "Pure-Python Retrosheet file client and lossless record/play parser (no native tools required)."
+name = "chadwickpy"
+dynamic = ["version"]
+description = "Pure-Python port of the Chadwick baseball tools (cwevent, cwgame, cwdaily, cwsub, cwcomment, cwbox). No compiler needed."
 readme = "README.md"
 license = "AGPL-3.0-or-later"
+license-files = ["LICENSE", "NOTICE", "COPYING-chadwick"]
 requires-python = ">=3.11"
 dependencies = []
+authors = [{ name = "C. B. Winslow" }]
+keywords = ["baseball", "retrosheet", "chadwick", "cwevent", "sabermetrics", "play-by-play"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Science/Research",
+  "License :: OSI Approved :: GNU Affero General Public License v3 or later (AGPLv3+)",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Scientific/Engineering :: Information Analysis",
+  "Typing :: Typed",
+]
+
+[project.urls]
+Homepage = "https://github.com/cbwinslow/chadwickpy"
+Documentation = "https://cbwinslow.github.io/chadwickpy/"
+Source = "https://github.com/cbwinslow/chadwickpy"
+Issues = "https://github.com/cbwinslow/chadwickpy/issues"
+Changelog = "https://github.com/cbwinslow/chadwickpy/blob/main/CHANGELOG.md"
 
 [project.scripts]
-# Same names as Chadwick's tools: a drop-in replacement. Installing this package next to the C
-# programs puts whichever directory comes first on PATH in front (tests find the C ones with real_tool).
-cwevent = "retrosheetpy.cw.cli:main_cwevent"
-cwgame = "retrosheetpy.cw.cli:main_cwgame"
-cwdaily = "retrosheetpy.cw.cli:main_cwdaily"
-cwsub = "retrosheetpy.cw.cli:main_cwsub"
-cwcomment = "retrosheetpy.cw.cli:main_cwcomment"
-cwbox = "retrosheetpy.cw.cli:main_cwbox"
-retrosheetpy = "retrosheetpy.cw.cli:main_umbrella"
+# Same names as Chadwick's tools. If the C programs are also installed, whichever directory
+# comes first on PATH wins; `chadwickpy TOOL ...` and `python -m chadwickpy TOOL ...` always
+# run this package's version.
+cwevent = "chadwickpy.tools.cli:main_cwevent"
+cwgame = "chadwickpy.tools.cli:main_cwgame"
+cwdaily = "chadwickpy.tools.cli:main_cwdaily"
+cwsub = "chadwickpy.tools.cli:main_cwsub"
+cwcomment = "chadwickpy.tools.cli:main_cwcomment"
+cwbox = "chadwickpy.tools.cli:main_cwbox"
+chadwickpy = "chadwickpy.tools.cli:main_umbrella"
+
+[dependency-groups]
+dev = ["pytest>=8", "ruff", "mypy", "coverage"]
+docs = ["mkdocs-material", "mkdocstrings[python]"]
 
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling", "hatch-vcs"]
 build-backend = "hatchling.build"
 
+[tool.hatch.version]
+source = "vcs"
+
 [tool.hatch.build.targets.wheel]
-packages = ["src/retrosheetpy"]
+packages = ["src/chadwickpy"]
+
+[tool.hatch.build.targets.sdist]
+include = ["src", "tests", "docs", "README.md", "LICENSE", "NOTICE", "COPYING-chadwick", "CHANGELOG.md", "pyproject.toml"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.mypy]
+strict = true
+files = ["src"]

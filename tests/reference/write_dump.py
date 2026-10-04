@@ -1,9 +1,9 @@
 """Port side of the scripted edits and writers of ``write_dump.c`` (script format: see there)."""
 
-from retrosheetpy.cw.book import Scorebook
-from retrosheetpy.cw.game import Game, event_comment_append, read_games
-from retrosheetpy.cw.roster import League, Player, Roster
-from retrosheetpy.cw.write import game_write, league_write, roster_write, scorebook_write
+from chadwickpy.book import Scorebook
+from chadwickpy.game import Game, event_comment_append, read_games
+from chadwickpy.roster import League, Player, Roster
+from chadwickpy.write import game_write, league_write, roster_write, scorebook_write
 
 
 def parse_script(text: str) -> list[list[str]]:

@@ -1,7 +1,7 @@
 """Regenerate the captured Chadwick reference output (needs ``cwevent`` on PATH).
 
 Run from the repository root:
-    uv run --package retrosheetpy python packages/retrosheetpy/tests/reference/capture.py
+    uv run python tests/reference/capture.py
 """
 
 import csv

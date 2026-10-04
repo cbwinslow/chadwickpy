@@ -1,19 +1,39 @@
-"""The Chadwick port (``retrosheetpy.cw``): all 164 columns equal captured ``cwevent`` output."""
+"""The Chadwick port (``chadwickpy``): all 164 columns equal captured ``cwevent`` output."""
 
 import csv
 import re
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
-from retrosheetpy.cw.events import COLUMNS, event_rows
-from retrosheetpy.cw.parse import Ev, parse_event
-from retrosheetpy.cw.tools import read_rosters, select_game
-from retrosheetpy.validation import compare_rows
+from chadwickpy.tools.events import COLUMNS, event_rows
+from chadwickpy.parse import Ev, parse_event
+from chadwickpy.tools.tools import read_rosters, select_game
 
 HERE = Path(__file__).parent
 FIXTURES = HERE / "fixtures" / "events"
 CHADWICK = HERE / "reference" / "chadwick"
 NAMES = sorted(p.stem for p in FIXTURES.glob("*.evt"))
+
+
+def compare_rows(reference, ours, theirs, fields):
+    """Row-by-row equality over ``fields`` (``NP`` rows dropped from both sides, as cwevent -n)."""
+    ours = [r for r in ours if r["EVENT_TX"] != "NP"]
+    theirs = [r for r in theirs if r["EVENT_TX"] != "NP"]
+    games = {r["GAME_ID"] for r in ours}
+    misaligned = 0 if [r["EVENT_TX"] for r in ours] == [r["EVENT_TX"] for r in theirs] else 1
+    bad = {}
+    for mine, ref in zip(ours, theirs, strict=False):
+        for f in fields:
+            if str(mine[f]) != ref[f]:
+                bad[f] = bad.get(f, 0) + 1
+    return SimpleNamespace(
+        games=len(games),
+        games_misaligned=misaligned,
+        plays_compared=len(ours),
+        mismatches=sum(bad.values()),
+        to_dict=lambda: {"fields": bad, "reference": reference},
+    )
 
 
 def read_rows(path):
@@ -54,7 +74,7 @@ def test_port_rows_with_rosters_equal_captured_chadwick(name):
 
 
 def test_game_selection_follows_cwtools():
-    from retrosheetpy.cw.game import Game
+    from chadwickpy.game import Game
 
     game = Game("ANA202009040", info=[("date", "2020/09/04")])
     assert select_game(game) and select_game(game, "ANA202009040", "0904", "0904")
@@ -81,15 +101,8 @@ def test_unparseable_play_reports_failure_like_chadwick():
     assert not ok
 
 
-def test_trailing_blank_in_a_number_is_accepted_like_atoi():
-    from retrosheetpy import iter_records
-
-    (rec,) = iter_records(['sub,comoa101,"Adam Comorosky",1,8,12 \n'], source="t.EVN")
-    assert rec.position == 12 and rec.raw.endswith("12 ")
-
-
 def test_guard_is_silent_on_clean_files_and_loud_on_new_notation():
-    from retrosheetpy.cw.guard import check_event_file
+    from chadwickpy.guard import check_event_file
 
     for name in NAMES:
         assert check_event_file((FIXTURES / f"{name}.evt").read_bytes(), name) == []
@@ -108,8 +121,8 @@ def test_guard_is_silent_on_clean_files_and_loud_on_new_notation():
 
 def test_suspended_comment_is_consumed_by_the_first_iterator_like_strtok():
     """The C cuts the shared comment at its first comma, so only one iterator sees the new date."""
-    from retrosheetpy.cw.game import read_games
-    from retrosheetpy.cw.gameiter import GameIter
+    from chadwickpy.game import read_games
+    from chadwickpy.gameiter import GameIter
 
     lines = (FIXTURES / "regular_2007.evt").read_bytes().split(b"\n")
     plays = [i for i, line in enumerate(lines) if line.startswith(b"play,")]

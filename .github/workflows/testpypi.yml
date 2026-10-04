@@ -1,0 +1,32 @@
+name: Publish to TestPyPI
+
+# Manual dry run of the release path: builds the current commit as a throw-away dev version
+# and uploads it to test.pypi.org (a separate index; nothing reaches real PyPI).
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  testpypi:
+    runs-on: ubuntu-latest
+    environment:
+      name: testpypi
+      url: https://test.pypi.org/project/chadwickpy/
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          python-version: "3.12"
+      - run: uv build
+        env:
+          SETUPTOOLS_SCM_PRETEND_VERSION: 0.0.0.dev${{ github.run_number }}
+      - uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # v1.14.2
+        with:
+          repository-url: https://test.pypi.org/legacy/
