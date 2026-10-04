@@ -13,8 +13,9 @@ import pytest
 HERE = Path(__file__).parent
 sys.path.insert(0, str(HERE))
 from chadwick_tool import build_sanitised, real_tool, run_clean, run_tool  # noqa: E402
-from chadwickpy.tools.comment import comment_lines, header_line  # noqa: E402
 from test_reader_differential import damage  # noqa: E402
+
+from chadwickpy.tools.comment import comment_lines, header_line  # noqa: E402
 
 pytestmark = pytest.mark.skipif(real_tool("cwcomment") is None, reason="needs cwcomment on PATH")
 

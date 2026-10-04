@@ -13,9 +13,12 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from _zips import iter_zip_members  # noqa: E402
+from _zips import (
+    is_event_filename,  # noqa: E402
+    iter_zip_members,  # noqa: E402
+)
+
 from chadwickpy.guard import check_event_file  # noqa: E402
-from _zips import is_event_filename  # noqa: E402
 
 
 def main(zip_path: str, year: str) -> int:

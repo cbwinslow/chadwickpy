@@ -6,8 +6,9 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
-from chadwickpy.tools.events import COLUMNS, event_rows
+
 from chadwickpy.parse import Ev, parse_event
+from chadwickpy.tools.events import COLUMNS, event_rows
 from chadwickpy.tools.tools import read_rosters, select_game
 
 HERE = Path(__file__).parent

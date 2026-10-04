@@ -25,6 +25,7 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent))
 
+from _zips import iter_zip_members  # noqa: E402
 from chadwick_tool import (  # noqa: E402
     SPORTSML_PATCH,
     TOUCHES_UNDERFLOW,
@@ -32,7 +33,7 @@ from chadwick_tool import (  # noqa: E402
     run_filled,
     run_tool,
 )  # noqa: E402
-from _zips import iter_zip_members  # noqa: E402
+
 from chadwickpy.tools.cwbox import box_text  # noqa: E402
 from chadwickpy.tools.tools import read_rosters  # noqa: E402
 

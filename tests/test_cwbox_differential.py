@@ -22,10 +22,11 @@ from chadwick_tool import (  # noqa: E402
     run_filled,
     run_tool,
 )
-from chadwickpy.tools.cwbox import box_text  # noqa: E402
-from chadwickpy.game import read_games  # noqa: E402
-from chadwickpy.tools.tools import read_rosters  # noqa: E402
 from test_reader_differential import damage  # noqa: E402
+
+from chadwickpy.game import read_games  # noqa: E402
+from chadwickpy.tools.cwbox import box_text  # noqa: E402
+from chadwickpy.tools.tools import read_rosters  # noqa: E402
 
 pytestmark = pytest.mark.skipif(real_tool("cwbox") is None, reason="needs cwbox on PATH")
 

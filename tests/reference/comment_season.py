@@ -17,8 +17,9 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent))
 
-from chadwick_tool import run_tool  # noqa: E402
 from _zips import iter_zip_members  # noqa: E402
+from chadwick_tool import run_tool  # noqa: E402
+
 from chadwickpy.tools.comment import comment_lines, header_line  # noqa: E402
 
 

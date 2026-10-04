@@ -12,7 +12,6 @@ import subprocess
 from pathlib import Path
 
 import pytest
-from chadwickpy.game import read_games
 from test_reader_differential import (
     FIXTURES,
     HERE,
@@ -22,6 +21,8 @@ from test_reader_differential import (
     event_sample,
     pytestmark,  # noqa: F401  (skip without gcc / Chadwick sources)
 )
+
+from chadwickpy.game import read_games
 
 from write_dump import MODES, parse_script  # isort: skip
 

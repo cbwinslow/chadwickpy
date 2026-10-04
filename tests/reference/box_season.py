@@ -20,8 +20,8 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 
-from box_dump import dump  # noqa: E402
 from _zips import iter_zip_members  # noqa: E402
+from box_dump import dump  # noqa: E402
 
 
 def main() -> int:

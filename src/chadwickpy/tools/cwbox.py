@@ -26,12 +26,12 @@ from chadwickpy.box import (
     get_starter,
     get_starting_pitcher,
 )
-from chadwickpy.tools.cwboxsml import print_sportsml
-from chadwickpy.tools.cwboxxml import print_xml
 from chadwickpy.file import scan_int
 from chadwickpy.game import Game
 from chadwickpy.lint import game_lint
 from chadwickpy.roster import League, Player, Roster
+from chadwickpy.tools.cwboxsml import print_sportsml
+from chadwickpy.tools.cwboxxml import print_xml
 from chadwickpy.tools.tools import iterate_games
 from chadwickpy.xmlwrite import XMLDoc, xml_document_cleanup
 

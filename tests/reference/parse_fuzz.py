@@ -15,9 +15,10 @@ import subprocess
 import sys
 import zipfile
 
-from parse_grammar import generate
-from chadwickpy.parse import parse_event
 from _zips import is_event_filename
+from parse_grammar import generate
+
+from chadwickpy.parse import parse_event
 
 
 def esc(p):

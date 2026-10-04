@@ -25,15 +25,11 @@ from collections.abc import Callable, Collection, Iterable
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from chadwickpy.tools import comment
-from chadwickpy.tools import cwgame
-from chadwickpy.tools import daily
-from chadwickpy.tools import events
-from chadwickpy.tools import sub
 from chadwickpy.book import scorebook_read
-from chadwickpy.tools.cwbox import process_game as box_process_game
 from chadwickpy.game import Game
 from chadwickpy.roster import League, Roster
+from chadwickpy.tools import comment, cwgame, daily, events, sub
+from chadwickpy.tools.cwbox import process_game as box_process_game
 from chadwickpy.tools.tools import read_rosters, select_game
 from chadwickpy.xmlwrite import XMLDoc, xml_document_cleanup
 

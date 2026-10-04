@@ -3,8 +3,8 @@
 import re
 import urllib.request
 import zipfile
-from datetime import date
 from collections.abc import Iterator
+from datetime import date
 from pathlib import Path
 from typing import IO
 
