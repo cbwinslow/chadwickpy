@@ -113,6 +113,7 @@ dev = [
     { name = "ruff" },
 ]
 docs = [
+    { name = "mkdocs" },
     { name = "mkdocs-material" },
     { name = "mkdocstrings", extra = ["python"] },
 ]
@@ -127,6 +128,7 @@ dev = [
     { name = "ruff" },
 ]
 docs = [
+    { name = "mkdocs", specifier = "<2" },
     { name = "mkdocs-material" },
     { name = "mkdocstrings", extras = ["python"] },
 ]

@@ -93,10 +93,11 @@ jobs:
           python -m venv /tmp/clean
           /tmp/clean/bin/pip install dist/*.whl
           cd /tmp
-          for t in cwevent cwgame cwdaily cwsub cwcomment cwbox chadwickpy; do
+          for t in cwevent cwgame cwdaily cwsub cwcomment cwbox; do
             /tmp/clean/bin/$t -h >/dev/null 2>&1 || /tmp/clean/bin/$t --help >/dev/null 2>&1 || { echo "$t failed"; exit 1; }
           done
-          /tmp/clean/bin/python -m chadwickpy cwevent -h >/dev/null 2>&1 || true
+          /tmp/clean/bin/chadwickpy cwevent -h >/dev/null 2>&1
+          /tmp/clean/bin/python -m chadwickpy cwevent -h >/dev/null 2>&1
           /tmp/clean/bin/python -c "import chadwickpy; print(chadwickpy.__version__)"
       - run: uvx twine check dist/*
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
