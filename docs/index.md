@@ -15,6 +15,6 @@ pip install chadwickpy
 
 * Output is byte-identical to the real Chadwick tools on every season 1910-2025.
 * About 25 times slower than the C.
-* Licence: AGPL-3.0-or-later; a derivative of Chadwick (GPL-2.0-or-later).
+* Licence: GPL-3.0-or-later; a derivative of Chadwick (GPL-2.0-or-later).
 
 See [Install and use](usage.md) to get started.

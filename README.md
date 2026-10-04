@@ -56,7 +56,7 @@ seasons; they need the Retrosheet decade zips. Run: `uv run pytest`.
 
 ## Licence and credit
 
-AGPL-3.0-or-later (`LICENSE`). This package is a derivative work of Chadwick, Copyright
+GPL-3.0-or-later (`LICENSE`). This package is a derivative work of Chadwick, Copyright
 (C) 2002-2023 Dr T L Turocy and the Chadwick Baseball Bureau, GPL-2.0-or-later
 (`COPYING-chadwick`, `NOTICE`); each ported module keeps that notice. chadwickpy is
 independent: it is not endorsed or sponsored by Chadwick or Retrosheet, and ships no
