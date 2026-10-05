@@ -45,7 +45,9 @@ class CFile:
             end = nl + 1
         else:
             end = limit
-        if end >= len(data):
+        # Like C's feof(): set only when the read itself ran into the end. A line that ends with
+        # its newline exactly at the end of the data has not, so the next read still reports EOF.
+        if nl == -1 and len(data) - pos < want:
             self.eof = True
         self.pos = end
         return data[pos:end].decode("latin-1")
@@ -105,7 +107,8 @@ class StrTok:
                 if cand != -1 and cand < end:
                     end = cand
             token = s[start:end]
-            if end >= n or end != q:
+            # The original loop stopped at a quote, newline or CR alike and resumed just after it.
+            if end >= n:
                 self._next = None
             else:
                 self._next = end + 1
@@ -150,13 +153,15 @@ def cw_atoi(text: str, msg: str | None = None) -> int:
     the first non-digit, so trailing text is ignored. Only a string with no
     digits at all, or a value outside ``int``, is invalid.
     """
-    if text.isdigit():
+    # Fast path for plain ASCII numbers. isdigit() alone is not enough: it is also true for
+    # characters like "\u00b2" that int() rejects and that C's strtol does not treat as digits.
+    if text.isascii() and text.isdigit():
         if len(text) < 10:
             return int(text)
         val = int(text)
         if val <= _INT_MAX:
             return val
-    elif text.startswith("-") and text[1:].isdigit():
+    elif text.startswith("-") and text.isascii() and text[1:].isdigit():
         if len(text) < 11:
             return -int(text[1:])
         val = -int(text[1:])
