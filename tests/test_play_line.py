@@ -3,6 +3,8 @@
 import logging
 import random
 
+import pytest
+
 from chadwickpy.file import StrTok, cw_atoi
 from chadwickpy.game import read_games
 
@@ -39,8 +41,8 @@ def test_quoted_play_field_follows_the_tokenizer() -> None:
     assert ev.event_text == "8,3"
 
 
-def test_matches_the_tokenizer_on_random_play_lines() -> None:
-    logging.getLogger("chadwickpy").setLevel(logging.ERROR)  # damaged lines warn; that is expected
+def test_matches_the_tokenizer_on_random_play_lines(caplog: pytest.LogCaptureFixture) -> None:
+    caplog.set_level(logging.ERROR, logger="chadwickpy")  # damaged lines warn; that is expected
     rng = random.Random(1957)
     pieces = ["1", "0", "x", "S8", "22", ' "q" ', ",", ",", ",", " ", "\t", "99", "?", "CFBX"]
     compared = 0
