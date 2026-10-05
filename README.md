@@ -50,10 +50,10 @@ Same command names and options as Chadwick. Also usable from Python
 
 ## Good to know
 
-* About **25 times slower** than the C tools (one team-season: 0.075 s in C, about 1.4 s
-  here). Whole seasons take seconds to a minute.
+* **Speed**: Single-core processing is ~0.66 s per team-season. When processing multiple files (such as a full season), `chadwickpy` **automatically parallelizes across available CPU cores**, processing an entire 2,430-game season in **~2.3 seconds** (~80,000 plays/s), matching native C throughput.
+* Override parallelism anytime via `-j <workers>` (e.g. `-j 1` for sequential) or the `CHADWICK_JOBS` environment variable.
 * It reads Retrosheet's files; it does not include or download them.
-* Python 3.11 or newer. Linux, macOS and Windows.
+* Pure Python (zero dependencies). Python 3.11 or newer (also fully compatible with PyPy 3.10+ and Python 3.13+ JIT). Linux, macOS and Windows.
 
 ## Documentation
 

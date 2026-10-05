@@ -62,6 +62,7 @@ class Options:
     print_header: bool = False
     use_xml: bool = False
     use_sportsml: bool = False
+    jobs: int | None = None
 
 
 @dataclass
@@ -212,6 +213,20 @@ def parse_command_line(tool: Tool, argv: list[str], opts: Options, io: IO) -> in
             opts.use_xml = True
         elif arg == "-S" and tool.box_options:
             opts.use_sportsml = True
+        elif arg == "-j":
+            if i + 1 < len(argv) and argv[i + 1].isdigit():
+                i += 1
+                opts.jobs = int(argv[i])
+            else:
+                opts.jobs = 0
+        elif arg.startswith("-j") and arg[2:].isdigit():
+            opts.jobs = int(arg[2:])
+        elif arg == "--jobs":
+            if i + 1 < len(argv) and argv[i + 1].isdigit():
+                i += 1
+                opts.jobs = int(argv[i])
+            else:
+                opts.jobs = 0
         elif arg[:1] == "-":
             io.err(f"*** Invalid option '{arg}'.\n")
             raise Exit(1)
@@ -287,6 +302,70 @@ def _write_stderr(text: str) -> None:
     sys.stderr.buffer.write(text.encode("latin-1"))
 
 
+def _worker_scorebook(task: tuple[str, Options, League, str]) -> tuple[str, str, int]:
+    tool_name, opts, league, filename = task
+    tool = TOOLS[tool_name]
+    out_chunks: list[str] = []
+    err_chunks: list[str] = []
+    sub_io = IO(out=out_chunks.append, err=err_chunks.append)
+    handler = _Stderr(sub_io)
+    log.addHandler(handler)
+    prev_level = log.level
+    log.setLevel(logging.WARNING)
+    status = 0
+    try:
+        process_scorebook(tool, opts, sub_io, league, filename)
+    except ValueError as e:
+        sub_io.err(f"chadwickpy: {e}\n")
+        status = 1
+    except Exception as e:
+        sub_io.err(f"chadwickpy: unexpected error processing {filename}: {e}\n")
+        status = 1
+    finally:
+        log.removeHandler(handler)
+        log.setLevel(prev_level)
+    return "".join(out_chunks), "".join(err_chunks), status
+
+
+def _init_worker(sys_paths: list[str]) -> None:
+    for p in reversed(sys_paths):
+        if p not in sys.path:
+            sys.path.insert(0, p)
+
+
+def _process_files_parallel(
+    tool_name: str,
+    opts: Options,
+    io: IO,
+    league: League,
+    files: list[str],
+    workers: int,
+) -> int:
+    from concurrent.futures import ProcessPoolExecutor
+
+    tasks = [(tool_name, opts, league, f) for f in files]
+    overall_status = 0
+    try:
+        with ProcessPoolExecutor(
+            max_workers=workers,
+            initializer=_init_worker,
+            initargs=(list(sys.path),),
+        ) as pool:
+            for out_text, err_text, st in pool.map(_worker_scorebook, tasks):
+                if out_text:
+                    io.out(out_text)
+                if err_text:
+                    io.err(err_text)
+                if st != 0:
+                    overall_status = st
+    except Exception:
+        # Fallback to sequential execution if multiprocessing encounters environment issues
+        tool = TOOLS[tool_name]
+        for filename in files:
+            process_scorebook(tool, opts, io, league, filename)
+    return overall_status
+
+
 def main(tool: Tool, argv: list[str] | None = None, io: IO | None = None) -> int:
     """``main`` of ``cwtools.c``: returns the exit status"""
     args = list(sys.argv if argv is None else argv)
@@ -309,8 +388,40 @@ def main(tool: Tool, argv: list[str] | None = None, io: IO | None = None) -> int
             doc = XMLDoc("sports-content-set")
             tool.state["doc"] = doc
             io.out(doc.take())
-        for filename in args[i:]:
-            process_scorebook(tool, opts, io, league, filename)
+        files = args[i:]
+        env_jobs = os.environ.get("CHADWICK_JOBS")
+        if env_jobs is not None and opts.jobs is None:
+            opts.jobs = (
+                0 if env_jobs.lower() == "auto" else (int(env_jobs) if env_jobs.isdigit() else 1)
+            )
+
+        # Determine effective worker count:
+        # 1. Single file or stdin: always 1 (no subprocess overhead)
+        # 2. Explicit -j 1: 1 worker
+        # 3. Explicit -j N (N > 1): N workers
+        # 4. Default (None) or -j 0 / auto:
+        #    If multiple files, auto-detect available cores (respecting container/affinity limits).
+        #    On multi-core systems (>4), leave 1 core free for OS/interactive responsiveness.
+        if len(files) <= 1 or opts.jobs == 1:
+            workers = 1
+        else:
+            # Container-aware CPU count (Python 3.13+), fallback to os.cpu_count()
+            detected = getattr(os, "process_cpu_count", os.cpu_count)() or 1
+            if opts.jobs is not None and opts.jobs > 1:
+                target = opts.jobs
+            elif opts.jobs == 0 or opts.jobs is None:
+                # Auto mode: on systems with >4 cores, leave 1 core for OS headroom
+                target = max(1, detected - 1) if detected > 4 else detected
+            else:
+                target = 1
+            workers = min(len(files), max(1, target))
+        if workers > 1 and not (tool.box_options and (opts.use_sportsml or opts.use_xml)):
+            parallel_status = _process_files_parallel(tool.name, opts, io, league, files, workers)
+            if parallel_status != 0:
+                status = parallel_status
+        else:
+            for filename in files:
+                process_scorebook(tool, opts, io, league, filename)
         if "doc" in tool.state:
             xml_document_cleanup(tool.state["doc"])
             io.out(tool.state.pop("doc").take())
@@ -345,8 +456,14 @@ _NAMES_HELP = "  -n        print field names in first row of output\n\n"
 
 
 def _lines(io: IO, lines: Iterable[str]) -> None:
+    chunk: list[str] = []
     for line in lines:
-        io.out(line + "\n")
+        chunk.append(line)
+        if len(chunk) >= 500:
+            io.out("\n".join(chunk) + "\n")
+            chunk.clear()
+    if chunk:
+        io.out("\n".join(chunk) + "\n")
 
 
 def _event_process(o: Options, io: IO, g: Game, v: Roster | None, h: Roster | None) -> None:
@@ -582,11 +699,15 @@ def run(name: str) -> int:
     try:
         status = main(TOOLS[name], [name, *sys.argv[1:]])
         sys.stdout.flush()
-    except BrokenPipeError:
+    except (BrokenPipeError, OSError):
         # The reader went away (``cwevent ... | head``). The C tools die quietly from SIGPIPE;
         # point stdout at /dev/null so Python's exit-time flush does not print a traceback too.
-        os.dup2(os.open(os.devnull, os.O_WRONLY), sys.stdout.fileno())
-        return 128 + signal.SIGPIPE
+        try:
+            os.dup2(os.open(os.devnull, os.O_WRONLY), sys.stdout.fileno())
+        except OSError:
+            pass
+        sigpipe = getattr(signal, "SIGPIPE", 13)
+        return 128 + int(sigpipe)
     return status
 
 

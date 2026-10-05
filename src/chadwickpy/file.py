@@ -39,14 +39,14 @@ class CFile:
             self.eof = True
             return None
         want = size - 1
-        end = pos
-        while end - pos < want:
-            if end >= len(data):
-                self.eof = True
-                break
-            end += 1
-            if data[end - 1] == 0x0A:
-                break
+        limit = min(pos + want, len(data))
+        nl = data.find(b"\n", pos, limit)
+        if nl != -1:
+            end = nl + 1
+        else:
+            end = limit
+        if end >= len(data):
+            self.eof = True
         self.pos = end
         return data[pos:end].decode("latin-1")
 
@@ -97,24 +97,46 @@ class StrTok:
         if s[at] == '"':
             at += 1
             start = at
-            while at < n and s[at] not in '"\n\r':
-                at += 1
-            token = s[start:at]
-            if at >= n:
+            q = s.find('"', at)
+            nl = s.find("\n", at)
+            cr = s.find("\r", at)
+            end = n
+            for cand in (q, nl, cr):
+                if cand != -1 and cand < end:
+                    end = cand
+            token = s[start:end]
+            if end >= n or end != q:
                 self._next = None
             else:
-                self._next = at + 1
-                # a comma immediately following a quote is skipped past
+                self._next = end + 1
                 if self._next < n and s[self._next] == ",":
                     self._next += 1
             return token
 
         start = at
-        while at < n and s[at] not in ",\n\r":
-            at += 1
-        token = s[start:at]
-        self._next = None if at >= n else at + 1
-        return token
+        comma = s.find(",", at)
+        if comma != -1:
+            nl = s.find("\n", at, comma)
+            cr = s.find("\r", at, comma)
+            end = comma
+            if nl != -1:
+                end = nl
+            if cr != -1 and cr < end:
+                end = cr
+            token = s[start:end]
+            self._next = None if end >= n else end + 1
+            return token
+        else:
+            nl = s.find("\n", at)
+            cr = s.find("\r", at)
+            end = n
+            if nl != -1:
+                end = nl
+            if cr != -1 and cr < end:
+                end = cr
+            token = s[start:end]
+            self._next = None if end >= n else end + 1
+            return token
 
 
 _INT_MIN, _INT_MAX = -(2**31), 2**31 - 1
@@ -128,6 +150,19 @@ def cw_atoi(text: str, msg: str | None = None) -> int:
     the first non-digit, so trailing text is ignored. Only a string with no
     digits at all, or a value outside ``int``, is invalid.
     """
+    if text.isdigit():
+        if len(text) < 10:
+            return int(text)
+        val = int(text)
+        if val <= _INT_MAX:
+            return val
+    elif text.startswith("-") and text[1:].isdigit():
+        if len(text) < 11:
+            return -int(text[1:])
+        val = -int(text[1:])
+        if val >= _INT_MIN:
+            return val
+
     i, n = 0, len(text)
     while i < n and text[i] in " \t\n\v\f\r":
         i += 1

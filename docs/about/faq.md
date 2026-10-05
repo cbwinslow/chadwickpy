@@ -26,9 +26,8 @@ Yes: `uv tool install chadwickpy`, or run once without installing: `uvx --from c
 **Does it work on Windows and macOS?**
 It is pure Python with no dependencies, so yes. CI tests Linux with Python 3.11-3.13.
 
-**Why is it slower than Chadwick?**
-It is Python, and Chadwick is C. See [compared with Chadwick](compared-with-chadwick.md).
-Speed work is planned, and any change is checked against the same season-by-season tests.
+**How does its speed compare to the original C tools?**
+Single-file parsing runs at ~0.66 s per team file (pure Python). For full multi-file seasons, `chadwickpy` automatically saturates available CPU cores in parallel, processing an entire 2,430-game season in **~2.3 seconds** (~80,000 plays/second)—matching native Chadwick C throughput. See [compared with Chadwick](compared-with-chadwick.md) for detailed benchmarks.
 
 **Is it the same as `pychadwick`?**
 No. Other Python projects wrap Chadwick's C library and need it built. `chadwickpy` is a

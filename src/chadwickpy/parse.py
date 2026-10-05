@@ -50,7 +50,7 @@ class Ev(IntEnum):
 _PUTOUTS, _ASSISTS, _ERRORS, _TOUCHES = 32, 32, 32, 64
 
 
-@dataclass
+@dataclass(slots=True)
 class EventData:
     """``CWEventData``: everything the play text alone says about the play."""
 
@@ -108,17 +108,19 @@ def runner_put_out(e: EventData, base: int) -> bool:
 
 def outs_on_play(e: EventData) -> int:
     """``cw_event_outs_on_play``"""
-    return sum(runner_put_out(e, b) for b in range(4))
+    return runner_put_out(e, 0) + runner_put_out(e, 1) + runner_put_out(e, 2) + runner_put_out(e, 3)
 
 
 def runs_on_play(e: EventData) -> int:
     """``cw_event_runs_on_play``"""
-    return sum(e.advance[b] >= 4 for b in range(4))
+    adv = e.advance
+    return (adv[0] >= 4) + (adv[1] >= 4) + (adv[2] >= 4) + (adv[3] >= 4)
 
 
 def rbi_on_play(e: EventData) -> int:
     """``cw_event_rbi_on_play``"""
-    return sum(e.rbi_flag[b] > 0 for b in range(4))
+    r = e.rbi_flag
+    return (r[0] > 0) + (r[1] > 0) + (r[2] > 0) + (r[3] > 0)
 
 
 def _set_play(e: EventData, base: int, play: str) -> None:
@@ -144,8 +146,11 @@ class _Parser:
     """``CWParserState`` plus the cursor primitives."""
 
     def __init__(self, text: str) -> None:
-        # C toupper is ASCII only; str.upper() would also change e.g. 'ß' to 'SS'.
-        s = "".join(c.upper() if c < "\x80" else c for c in text)
+        s = (
+            text.upper()
+            if text.isascii()
+            else "".join(c.upper() if c < "\x80" else c for c in text)
+        )
         # Preprocessing to turn SBH and CSH strings into SB4 and CS4
         i = s.find("SBH")
         if i >= 0:

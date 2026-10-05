@@ -74,6 +74,23 @@ Default is quoted, comma-separated text (`-a`). `-ft` writes fixed-width Fortran
 output. `-q` suppresses the progress messages Chadwick prints to the screen (stderr), which
 is useful in scripts.
 
+## Multi-core processing
+
+When several files are given at once (such as an entire season), `chadwickpy` **automatically runs across multiple CPU cores** in parallel, while ensuring the output remains 100% deterministic and byte-for-byte in the exact file order requested.
+
+```bash
+# Automatically uses all available CPU cores:
+cwevent -y 2024 -n 2024*.EV* > 2024_all_events.csv
+
+# Limit or specify the number of worker cores manually:
+cwevent -j 4 -y 2024 -n 2024*.EV* > 2024_all_events.csv
+
+# Force single-threaded sequential execution:
+cwevent -j 1 -y 2024 -n 2024*.EV* > 2024_all_events.csv
+```
+
+You can also set the default worker count globally using the `CHADWICK_JOBS` environment variable (e.g. `export CHADWICK_JOBS=4`).
+
 ## Good to know
 
 * The first row of data is the first play, not a game header.
