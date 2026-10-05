@@ -45,7 +45,9 @@ class CFile:
             end = nl + 1
         else:
             end = limit
-        if end >= len(data):
+        # Like C's feof(): set only when the read itself ran into the end. A line that ends with
+        # its newline exactly at the end of the data has not, so the next read still reports EOF.
+        if nl == -1 and len(data) - pos < want:
             self.eof = True
         self.pos = end
         return data[pos:end].decode("latin-1")
