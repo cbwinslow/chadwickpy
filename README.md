@@ -1,74 +1,89 @@
-# chadwickpy
+<p align="center">
+  <img src="https://raw.githubusercontent.com/cbwinslow/chadwickpy/main/docs/assets/logo.svg" alt="chadwickpy logo" width="96">
+</p>
 
-[![CI](https://github.com/cbwinslow/chadwickpy/actions/workflows/ci.yml/badge.svg)](https://github.com/cbwinslow/chadwickpy/actions/workflows/ci.yml)
-[![PyPI](https://img.shields.io/pypi/v/chadwickpy)](https://pypi.org/project/chadwickpy/)
-[![Docs](https://img.shields.io/badge/docs-GitHub%20Pages-blue)](https://cbwinslow.github.io/chadwickpy/)
+<h1 align="center">chadwickpy</h1>
 
-A pure-Python port of the [Chadwick](https://github.com/chadwickbureau/chadwick) baseball
-tools: `cwevent`, `cwgame`, `cwdaily`, `cwsub`, `cwcomment` and `cwbox`. They read
-[Retrosheet](https://www.retrosheet.org) event files and write the same tables Chadwick
-does. No compiler, no C library, no dependencies: `pip install chadwickpy`.
+<p align="center"><b>Retrosheet play-by-play files to data tables. Pure Python, one <code>pip install</code>.</b></p>
 
-The code is a function-by-function translation of Chadwick's C. Its output is
-byte-identical to the real tools on every season from 1910 to 2025 (all six tools; see
-[Verification](#verification)), apart from the [differences](#differences-from-chadwick) below.
+<p align="center">
+  <a href="https://github.com/cbwinslow/chadwickpy/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/cbwinslow/chadwickpy/actions/workflows/ci.yml/badge.svg"></a>
+  <a href="https://pypi.org/project/chadwickpy/"><img alt="PyPI" src="https://img.shields.io/pypi/v/chadwickpy"></a>
+  <a href="https://pypi.org/project/chadwickpy/"><img alt="Python versions" src="https://img.shields.io/pypi/pyversions/chadwickpy"></a>
+  <a href="https://pypi.org/project/chadwickpy/"><img alt="Downloads" src="https://img.shields.io/pypi/dm/chadwickpy"></a>
+  <a href="LICENSE"><img alt="License" src="https://img.shields.io/pypi/l/chadwickpy"></a>
+  <a href="https://cbwinslow.github.io/chadwickpy/"><img alt="Docs" src="https://img.shields.io/badge/docs-website-14213d"></a>
+</p>
 
-## Install and use
+[Retrosheet](https://www.retrosheet.org) publishes every play of every MLB game as text
+files. The [Chadwick](https://github.com/chadwickbureau/chadwick) tools turn those files into
+tables. **chadwickpy is those same six tools, rewritten in pure Python**: no compiler, no C
+library, no dependencies. Output is byte-identical to Chadwick on every season from 1910 to 2025.
 
 ```bash
-pip install chadwickpy        # or: uv tool install chadwickpy
-cwevent -y 2010 -f 0-96 2010NYA.EVA > 2010NYA.csv
-cwgame -y 2010 2010NYA.EVA
-chadwickpy cwbox -y 2010 2010NYA.EVA   # same tool, always this package's version
-python -m chadwickpy cwdaily -y 2010 2010NYA.EVA
+pip install chadwickpy            # or: uvx --from chadwickpy cwevent -h
+curl -O https://www.retrosheet.org/events/2010seve.zip
+unzip -q 2010seve.zip -d retro2010 && cd retro2010
+cwevent -y 2010 -n -f 0,2,3,4,10,14,29,34 2010NYA.EVA > yankees_events.csv
 ```
 
-The command names and options are Chadwick's; see its
-[documentation](https://chadwick.readthedocs.io/). If the C programs are also installed,
-whichever comes first on `PATH` runs; `chadwickpy TOOL` always runs this package.
-Roster (`.ROS`, `TEAMyyyy`) files are read from the event file's directory, as in Chadwick.
+```text
+"GAME_ID","INN_CT","BAT_HOME_ID","OUTS_CT","BAT_ID","PIT_ID","EVENT_TX","EVENT_CD"
+"NYA201004130",1,0,0,"aybae001","petta001","S9/F9S-",20
+"NYA201004130",1,0,0,"abreb001","petta001","K",3
+"NYA201004130",1,0,1,"huntt001","petta001","8/F8LXD",2
+```
 
-The library is importable too. The layout follows Chadwick's: `chadwickpy` (the `cwlib`
-parts: parser, game, file, roster, box score, game iterator) and `chadwickpy.tools` (the
-`cwtools` programs).
+## The six tools
 
-## Speed
+| Tool | One row per |
+|---|---|
+| `cwevent` | event (a play): up to 164 columns |
+| `cwgame` | game |
+| `cwdaily` | player per game (batting, pitching, fielding) |
+| `cwsub` | substitution |
+| `cwcomment` | scorer comment |
+| `cwbox` | game, as a text, XML or SportsML box score |
 
-About 25 times slower than the C (`cwevent` on one team-season: 0.075 s in C, about
-1.4 s here). That is the price of needing nothing but Python. Whole seasons still run in
-seconds to minutes.
+Same command names and options as Chadwick. Also usable from Python
+(`from chadwickpy.tools.events import event_rows`).
 
-## Differences from Chadwick
+## Good to know
 
-- Where the C crashes or reads uninitialised memory this port raises `ValueError` or uses
-  a defined value. `cwbox -S` (it segfaults in Chadwick 0.10.0) and the `pb` attribute of
-  `cwbox -X` are compared against a patched build.
-- The reference is Chadwick's development commit `c685ab5` (it reports 0.10.0), not the
-  released v0.10.0 tag, whose output differs on 2025 files.
-- Inputs that make the C behave in undefined ways are not compared.
+* About **25 times slower** than the C tools (one team-season: 0.075 s in C, about 1.4 s
+  here). Whole seasons take seconds to a minute.
+* It reads Retrosheet's files; it does not include or download them.
+* Python 3.11 or newer. Linux, macOS and Windows.
+
+## Documentation
+
+**<https://cbwinslow.github.io/chadwickpy/>**: getting started, a guide to each tool, Python
+usage, recipes, the full option and field reference, how it was verified, and an FAQ.
+Machine-readable: [`llms.txt`](https://cbwinslow.github.io/chadwickpy/llms.txt).
 
 ## Verification
 
-`tests/` runs every tool against captured real-Chadwick output and, when Chadwick is
-available, against the real programs (set `CHADWICK_BIN` and `CHADWICK_SRC`, or build
-Chadwick at `c685ab5`; CI does). Season-sweep drivers in `tests/reference/` compare whole
-seasons; they need the Retrosheet decade zips. Run: `uv run pytest`.
+`tests/` compares every tool with captured real-Chadwick output, and with the real programs
+when they are available (`CHADWICK_BIN`, `CHADWICK_SRC`). CI builds Chadwick at commit
+`c685ab5` and runs the whole suite on Python 3.11-3.13, failing on any skipped parity test.
+Run it yourself: `uv run --with pytest pytest`.
 
 ## Licence and credit
 
-GPL-3.0-or-later (`LICENSE`). This package is a derivative work of Chadwick, Copyright
-(C) 2002-2023 Dr T L Turocy and the Chadwick Baseball Bureau, GPL-2.0-or-later
-(`COPYING-chadwick`, `NOTICE`); each ported module keeps that notice. chadwickpy is
-independent: it is not endorsed or sponsored by Chadwick or Retrosheet, and ships no
-Retrosheet data.
+GPL-3.0-or-later (`LICENSE`). chadwickpy is a derivative work of Chadwick, Copyright (C)
+2002-2023 Dr T L Turocy and the Chadwick Baseball Bureau, GPL-2.0-or-later (`COPYING-chadwick`,
+`NOTICE`); each ported module keeps that notice. It is independent: Chadwick and Retrosheet do
+not endorse or sponsor it, and it ships no Retrosheet data.
 
-Retrosheet's data-use notice asks that anyone using its data say so. If you publish
-anything built on it, include:
+Retrosheet's data-use notice asks that anyone using its data say so. If you publish anything
+built on it, include:
 
 > The information used here was obtained free of charge from and is copyrighted by
 > Retrosheet. Interested parties may contact Retrosheet at "www.retrosheet.org".
 
-## Contributing and security
+## Contributing, questions, security
 
-See `CONTRIBUTING.md` and `SECURITY.md`. A rule of this project: the port stays a
-translation of Chadwick's C. Rules are taken from the C, never guessed from output.
+[CONTRIBUTING.md](CONTRIBUTING.md) · [Discussions](https://github.com/cbwinslow/chadwickpy/discussions) ·
+[Issues](https://github.com/cbwinslow/chadwickpy/issues) · [SECURITY.md](SECURITY.md).
+The rule of the project: the port stays a translation of Chadwick's C; rules come from the C,
+never from tuning output.

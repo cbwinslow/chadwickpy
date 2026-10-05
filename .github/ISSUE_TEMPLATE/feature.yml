@@ -1,0 +1,9 @@
+name: Feature request
+description: Suggest an improvement. Note that the port stays a translation of Chadwick's C.
+labels: [enhancement]
+body:
+  - type: textarea
+    id: idea
+    attributes:
+      label: What would you like, and why?
+    validations: { required: true }

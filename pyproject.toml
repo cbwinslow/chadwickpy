@@ -44,7 +44,7 @@ chadwickpy = "chadwickpy.tools.cli:main_umbrella"
 
 [dependency-groups]
 dev = ["pytest>=8", "ruff", "mypy", "coverage"]
-docs = ["mkdocs<2", "mkdocs-material", "mkdocstrings[python]", "mkdocs-gen-files", "mkdocs-llmstxt"]
+docs = ["mkdocs<2", "mkdocs-material", "mkdocstrings[python]", "mkdocs-gen-files", "mkdocs-llmstxt", "mkdocs-git-revision-date-localized-plugin"]
 
 [build-system]
 requires = ["hatchling", "hatch-vcs"]

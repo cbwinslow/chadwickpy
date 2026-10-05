@@ -1,0 +1,23 @@
+name: Output differs from Chadwick
+description: chadwickpy gives a different result from the real Chadwick tools.
+labels: [parity]
+body:
+  - type: input
+    id: tool
+    attributes:
+      label: Which tool and column?
+      placeholder: "cwevent, column 58 (BAT_DEST_ID)"
+    validations: { required: true }
+  - type: textarea
+    id: lines
+    attributes:
+      label: The event-file lines involved (the game id and the play lines)
+      render: text
+    validations: { required: true }
+  - type: textarea
+    id: outputs
+    attributes:
+      label: Chadwick's output and chadwickpy's output
+      description: Include the Chadwick version or commit.
+      render: text
+    validations: { required: true }

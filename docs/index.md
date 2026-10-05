@@ -12,6 +12,22 @@ tools are the standard way to turn them into tables a researcher can use. `chadw
 those same six tools, rewritten in pure Python, so you can install them anywhere Python runs:
 no compiler, no C library, no dependencies.
 
+<div class="grid cards" markdown>
+
+-   :material-rocket-launch: **[Get started](getting-started.md)**
+
+    Install, download a season, and write your first table in a few minutes.
+
+-   :material-book-open-variant: **[Guides](guides/event-data.md)**
+
+    The six tools, the columns they write, Python usage and worked recipes.
+
+-   :material-console: **[Reference](reference/index.md)**
+
+    Every option and field of every tool, generated from the tools themselves.
+
+</div>
+
 === "Before (an event file)"
 
     ```text

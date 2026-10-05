@@ -4,9 +4,36 @@ site_url: https://cbwinslow.github.io/chadwickpy/
 repo_url: https://github.com/cbwinslow/chadwickpy
 repo_name: cbwinslow/chadwickpy
 edit_uri: edit/main/docs/
+copyright: >-
+  chadwickpy is independent of Chadwick and Retrosheet. GPL-3.0-or-later.
+  <a href="https://github.com/cbwinslow/chadwickpy/issues/new?template=docs.yml">Report a problem with this page</a>
 theme:
   name: material
+  custom_dir: overrides
+  logo: assets/logo.svg
+  favicon: assets/favicon.svg
+  font:
+    text: Inter
+    code: JetBrains Mono
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+  icon:
+    repo: fontawesome/brands/github
   features:
+    - content.action.edit
     - navigation.sections
     - navigation.top
     - navigation.footer
@@ -14,8 +41,21 @@ theme:
     - content.tabs.link
     - search.suggest
     - toc.follow
+extra_css:
+  - stylesheets/extra.css
+extra:
+  generator: false
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/cbwinslow/chadwickpy
+    - icon: fontawesome/brands/python
+      link: https://pypi.org/project/chadwickpy/
 plugins:
   - search
+  - git-revision-date-localized:
+      enable_creation_date: false
+      type: date
+      fallback_to_build_date: true
   - gen-files:
       scripts:
         - docs/gen_reference.py
@@ -75,6 +115,10 @@ nav:
 markdown_extensions:
   - admonition
   - attr_list
+  - md_in_html
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
   - toc:
       permalink: true
   - pymdownx.superfences
