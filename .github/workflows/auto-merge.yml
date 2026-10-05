@@ -1,0 +1,28 @@
+name: Auto-merge
+
+# Turns on GitHub auto-merge for pull requests opened by the maintainer from a branch in this
+# repo. GitHub then merges the PR only after every branch rule passes (required checks green,
+# review threads resolved, no changes requested). It does nothing for forks, other authors,
+# Dependabot or the release PR: those stay manual on purpose.
+on:
+  pull_request_target:
+    types: [opened, reopened, ready_for_review]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  enable:
+    if: >-
+      github.event.pull_request.user.login == 'cbwinslow' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    steps:
+      # No checkout: nothing from the PR is ever run here.
+      - name: Enable auto-merge (squash)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+        run: gh pr merge --auto --squash "$PR_URL"
