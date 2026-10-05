@@ -1,28 +1,85 @@
 site_name: chadwickpy
-site_description: Pure-Python port of the Chadwick baseball tools (cwevent, cwgame, cwdaily, cwsub, cwcomment, cwbox).
+site_description: Pure-Python port of the Chadwick baseball tools (cwevent, cwgame, cwdaily, cwsub, cwcomment, cwbox). Turn Retrosheet play-by-play files into data tables.
 site_url: https://cbwinslow.github.io/chadwickpy/
 repo_url: https://github.com/cbwinslow/chadwickpy
 repo_name: cbwinslow/chadwickpy
 edit_uri: edit/main/docs/
 theme:
   name: material
-  features: [navigation.sections, content.code.copy, search.suggest]
+  features:
+    - navigation.sections
+    - navigation.top
+    - navigation.footer
+    - content.code.copy
+    - content.tabs.link
+    - search.suggest
+    - toc.follow
 plugins:
   - search
+  - gen-files:
+      scripts:
+        - docs/gen_reference.py
   - mkdocstrings:
       handlers:
         python:
           paths: [src]
           options:
             show_source: false
+            show_root_heading: true
             docstring_style: google
+  - llmstxt:
+      full_output: llms-full.txt
+      markdown_description: >-
+        chadwickpy is a pure-Python port of the Chadwick baseball tools (cwevent, cwgame,
+        cwdaily, cwsub, cwcomment, cwbox). It converts Retrosheet play-by-play event files into
+        CSV tables. Install with pip install chadwickpy. Output is identical to the C tools.
+      sections:
+        Start here:
+          - index.md: what chadwickpy is and a one-minute example
+          - getting-started.md: install, get Retrosheet data, first command
+        Guides:
+          - guides/event-data.md: cwevent columns, event codes and filters
+          - guides/games-and-players.md: cwgame and cwdaily
+          - guides/subs-and-comments.md: cwsub and cwcomment
+          - guides/box-scores.md: cwbox
+          - guides/python-api.md: use it from Python
+          - guides/recipes.md: worked examples
+        About:
+          - about/compared-with-chadwick.md: differences, speed, licence
+          - about/verification.md: how output was verified
+          - about/faq.md: frequently asked questions
 nav:
   - Home: index.md
-  - Install and use: usage.md
-  - Tools: tools.md
-  - Library: library.md
-  - How it was verified: verification.md
-  - Changelog: changelog.md
+  - Getting started: getting-started.md
+  - Guides:
+      - Event data (cwevent): guides/event-data.md
+      - Games and players: guides/games-and-players.md
+      - Substitutions and comments: guides/subs-and-comments.md
+      - Box scores: guides/box-scores.md
+      - Python API: guides/python-api.md
+      - Recipes: guides/recipes.md
+  - Reference:
+      - reference/index.md
+      - cwevent: reference/cwevent.md
+      - cwgame: reference/cwgame.md
+      - cwdaily: reference/cwdaily.md
+      - cwsub: reference/cwsub.md
+      - cwcomment: reference/cwcomment.md
+      - cwbox: reference/cwbox.md
+      - Python library: reference/library.md
+  - About:
+      - Compared with Chadwick: about/compared-with-chadwick.md
+      - How it was verified: about/verification.md
+      - FAQ: about/faq.md
+      - Changelog: about/changelog.md
 markdown_extensions:
   - admonition
-  - toc: { permalink: true }
+  - attr_list
+  - toc:
+      permalink: true
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.highlight
+exclude_docs: |
+  gen_reference.py
