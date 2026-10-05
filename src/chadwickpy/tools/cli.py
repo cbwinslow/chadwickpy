@@ -366,6 +366,33 @@ def _process_files_parallel(
     return overall_status
 
 
+def available_cpus() -> int:
+    """CPUs this process may actually use (honours CPU affinity where Python can see it)."""
+    process_cpu_count = getattr(os, "process_cpu_count", None)  # Python 3.13+
+    if process_cpu_count is not None:
+        return process_cpu_count() or 1
+    try:
+        return len(os.sched_getaffinity(0)) or 1  # Linux: honours taskset and cpusets
+    except AttributeError:  # macOS, Windows
+        return os.cpu_count() or 1
+
+
+def worker_count(n_files: int, jobs: int | None) -> int:
+    """How many worker processes to use for ``n_files`` files.
+
+    One file, or ``-j 1``: no extra processes. ``-j N``: N (never more than there are files).
+    Otherwise (automatic): the usable CPUs, leaving one free when there are more than four.
+    """
+    if n_files <= 1 or jobs == 1:
+        return 1
+    if jobs is not None and jobs > 1:
+        target = jobs
+    else:
+        detected = available_cpus()
+        target = max(1, detected - 1) if detected > 4 else detected
+    return min(n_files, max(1, target))
+
+
 def main(tool: Tool, argv: list[str] | None = None, io: IO | None = None) -> int:
     """``main`` of ``cwtools.c``: returns the exit status"""
     args = list(sys.argv if argv is None else argv)
@@ -395,26 +422,7 @@ def main(tool: Tool, argv: list[str] | None = None, io: IO | None = None) -> int
                 0 if env_jobs.lower() == "auto" else (int(env_jobs) if env_jobs.isdigit() else 1)
             )
 
-        # Determine effective worker count:
-        # 1. Single file or stdin: always 1 (no subprocess overhead)
-        # 2. Explicit -j 1: 1 worker
-        # 3. Explicit -j N (N > 1): N workers
-        # 4. Default (None) or -j 0 / auto:
-        #    If multiple files, auto-detect available cores (respecting container/affinity limits).
-        #    On multi-core systems (>4), leave 1 core free for OS/interactive responsiveness.
-        if len(files) <= 1 or opts.jobs == 1:
-            workers = 1
-        else:
-            # Container-aware CPU count (Python 3.13+), fallback to os.cpu_count()
-            detected = getattr(os, "process_cpu_count", os.cpu_count)() or 1
-            if opts.jobs is not None and opts.jobs > 1:
-                target = opts.jobs
-            elif opts.jobs == 0 or opts.jobs is None:
-                # Auto mode: on systems with >4 cores, leave 1 core for OS headroom
-                target = max(1, detected - 1) if detected > 4 else detected
-            else:
-                target = 1
-            workers = min(len(files), max(1, target))
+        workers = worker_count(len(files), opts.jobs)
         if workers > 1 and not (tool.box_options and (opts.use_sportsml or opts.use_xml)):
             parallel_status = _process_files_parallel(tool.name, opts, io, league, files, workers)
             if parallel_status != 0:
