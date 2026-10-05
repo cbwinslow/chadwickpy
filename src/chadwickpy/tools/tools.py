@@ -78,3 +78,28 @@ def iterate_games(
                 league.roster_find(game.info_lookup("visteam")),
                 league.roster_find(game.info_lookup("hometeam")),
             )
+
+
+def date_digits(date: str) -> str:
+    """The eight characters ``cwgame_date`` and ``cwdaily_date`` print: date[0..3], [5], [6], [8],
+    [9] (``YYYYMMDD`` for a ``YYYY/MM/DD`` date), read with ``%c`` and no length check.
+
+    For a date shorter than 10 characters the C reads the string's terminating NUL, which is in
+    bounds, as one of those characters. ``printf("%s")`` then stops at it, so the text ends there
+    and the rest of the output row is lost. The result holds that NUL (the caller cuts the row at
+    it). Where the C would read beyond the terminator the bytes are leftovers, so that raises."""
+    out: list[str] = []
+    for index in (0, 1, 2, 3, 5, 6, 8, 9):
+        if index < len(date):
+            out.append(date[index])
+        elif index == len(date):
+            out.append("\0")
+            return "".join(out)
+        else:
+            raise ValueError(f"date {date!r} is shorter than the C reads (undefined behaviour)")
+    return "".join(out)
+
+
+def cut_at_nul(row: str) -> str:
+    """``printf("%s")`` of an output row stops at the first NUL byte that a field wrote."""
+    return row.split("\0", 1)[0]

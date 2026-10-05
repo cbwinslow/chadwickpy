@@ -33,7 +33,7 @@ from chadwickpy.file import cw_atoi, scan_int
 from chadwickpy.game import Game
 from chadwickpy.gameiter import GameIter
 from chadwickpy.roster import League, Roster
-from chadwickpy.tools.tools import iterate_games
+from chadwickpy.tools.tools import cut_at_nul, date_digits, iterate_games
 
 Field = Callable[[bool, GameIter, Boxscore, Roster | None, Roster | None], str]
 
@@ -147,10 +147,7 @@ def _game_id(a: bool, gi: GameIter, box: Boxscore, v: Roster | None, h: Roster |
 
 
 def _date(a: bool, gi: GameIter, box: Boxscore, v: Roster | None, h: Roster | None) -> str:
-    date = _deref(_info(gi, "date"))
-    if len(date) < 10:
-        raise ValueError(f"date {date!r} is shorter than the C reads (undefined behaviour)")
-    text = date[0:4] + date[5:7] + date[8:10]
+    text = date_digits(_deref(_info(gi, "date")))
     return f'"{text}"' if a else text
 
 
@@ -736,7 +733,7 @@ def game_line(
     for i in range(MAX_EXT_FIELD + 1):
         if i in ext_fields:
             parts.append(_deref(EXT_FIELDS[i][0])(ascii_, gi, box, visitors, home))
-    return ("," if ascii_ else "").join(parts)
+    return cut_at_nul(("," if ascii_ else "").join(parts))
 
 
 def header_line(fields: Collection[int], ext_fields: Collection[int]) -> str:

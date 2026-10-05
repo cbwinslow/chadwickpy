@@ -20,6 +20,13 @@ log = logging.getLogger("chadwickpy")
 BUFSIZE = 1024  # ``char buf[1024]`` in ``cw_game_read``
 
 
+class ReportedError(ValueError):
+    """The C prints this message itself (on stderr) and calls ``exit(1)``.
+
+    The port logs the message and raises this, so the command line ends with status 1 without
+    printing the message a second time."""
+
+
 class CFile:
     """The part of a C ``FILE *`` that ``cw_game_read`` uses on an event file."""
 

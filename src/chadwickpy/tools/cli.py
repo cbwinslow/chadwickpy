@@ -28,6 +28,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from chadwickpy.book import scorebook_read
+from chadwickpy.file import ReportedError
 from chadwickpy.game import Game
 from chadwickpy.roster import League, Roster
 from chadwickpy.tools import comment, cwgame, daily, events, sub
@@ -287,6 +288,9 @@ class _Stderr(logging.Handler):
         self.io = io
 
     def emit(self, record: logging.LogRecord) -> None:
+        if isinstance(record.args, tuple) and any(a is None for a in record.args):
+            # A NULL string passed to "%s" prints as "(null)" in glibc; Python would print None.
+            record.args = tuple("(null)" if a is None else a for a in record.args)
         msg = record.getMessage()
         if msg.startswith("WARNING: reading stopped"):
             return  # the port's own diagnostic; Chadwick prints nothing here
@@ -315,7 +319,9 @@ def _worker_scorebook(task: tuple[str, Options, League, str]) -> tuple[str, str,
     status = 0
     try:
         process_scorebook(tool, opts, sub_io, league, filename)
-    except ValueError as e:
+    except ReportedError:
+        status = 1  # the message is already on stderr
+    except (ValueError, IndexError) as e:
         sub_io.err(f"chadwickpy: {e}\n")
         status = 1
     except Exception as e:
@@ -440,7 +446,9 @@ def main(tool: Tool, argv: list[str] | None = None, io: IO | None = None) -> int
             io.out(tool.state.pop("doc").take())
     except Exit as e:
         status = e.code
-    except ValueError as e:
+    except ReportedError:
+        status = 1  # the message is already on stderr
+    except (ValueError, IndexError) as e:
         io.err(f"chadwickpy: {e}\n")
         status = 1
     finally:
