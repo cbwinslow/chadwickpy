@@ -133,7 +133,7 @@ def test_start_time_without_a_colon_prints_the_year_left_over_in_min(
 
 
 def test_start_time_without_a_colon_and_without_the_day_field_is_refused(tmp_path: Path) -> None:
-    """With field 3 (day of week) not printed, the slot holds something unknowable: stay an error."""
+    """Without field 3 (day of week) printed first, the slot holds something unknowable: an error."""
     folder = tmp_path / "w"
     folder.mkdir()
     (folder / f"{YEAR}.EBR").write_bytes(box_game(starttime="0.375").encode())
