@@ -298,6 +298,7 @@ def read_game(file: CFile) -> Game | None:
             # CR/LF inside, and no field starting with a space or tab (the tokenizer skips those).
             if (
                 len(parts) == 7
+                and parts[6] != ""  # a trailing comma leaves no sixth field: the tokenizer skips it
                 and '"' not in body
                 and "\r" not in body
                 and "\n" not in body

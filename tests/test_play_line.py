@@ -47,9 +47,10 @@ def test_matches_the_tokenizer_on_random_play_lines() -> None:
     for _ in range(4000):
         line = "play," + "".join(rng.choice(pieces) for _ in range(rng.randrange(4, 22)))
         want = _tokens(line)[1:]
-        if len(want) < 6:
-            continue
         got = _read_play(line)
+        if len(want) < 6:
+            assert got == [], line  # too few fields: Chadwick skips the record
+            continue
         assert len(got) == 1, line
         ev = got[0]
         assert (ev.inning, ev.batting_team) == (cw_atoi(want[0]), cw_atoi(want[1])), line
