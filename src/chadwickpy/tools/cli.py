@@ -20,6 +20,8 @@ not an option.
 """
 
 import logging
+import os
+import signal
 import sys
 from collections.abc import Callable, Collection, Iterable
 from dataclasses import dataclass, field
@@ -577,8 +579,14 @@ TOOLS = {t.name: t for t in (CWEVENT, CWGAME, CWDAILY, CWSUB, CWCOMMENT, CWBOX)}
 
 def run(name: str) -> int:
     """Entry point of the console script for the tool ``name``"""
-    status = main(TOOLS[name], [name, *sys.argv[1:]])
-    sys.stdout.flush()
+    try:
+        status = main(TOOLS[name], [name, *sys.argv[1:]])
+        sys.stdout.flush()
+    except BrokenPipeError:
+        # The reader went away (``cwevent ... | head``). The C tools die quietly from SIGPIPE;
+        # point stdout at /dev/null so Python's exit-time flush does not print a traceback too.
+        os.dup2(os.open(os.devnull, os.O_WRONLY), sys.stdout.fileno())
+        return 128 + signal.SIGPIPE
     return status
 
 
