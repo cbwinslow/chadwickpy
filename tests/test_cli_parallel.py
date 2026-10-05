@@ -111,3 +111,50 @@ def test_parallel_handles_worker_exception(tmp_path: Path, monkeypatch: pytest.M
     err_text = "".join(err)
     assert status != 0 or len(err_text) > 0
     assert "Processing file" in err_text or len(out) > 0
+
+
+class _DiesAfterFirst:
+    """A stand-in process pool whose worker "dies" after the first file's result is delivered."""
+
+    def __init__(self, *args: object, **kwargs: object) -> None:
+        pass
+
+    def __enter__(self) -> "_DiesAfterFirst":
+        return self
+
+    def __exit__(self, *exc: object) -> None:
+        return None
+
+    def map(self, fn, tasks):  # type: ignore[no-untyped-def]
+        from concurrent.futures.process import BrokenProcessPool
+
+        tasks = list(tasks)
+        yield fn(tasks[0])
+        raise BrokenProcessPool("a worker died")
+
+
+def test_a_dead_worker_does_not_duplicate_output(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """If the pool breaks part-way, files already written must not be written again."""
+    for f in ROSTERS.iterdir():
+        (tmp_path / f.name).write_bytes(f.read_bytes())
+    file_a = tmp_path / "2007A.EVA"
+    file_b = tmp_path / "2007B.EVA"
+    file_a.write_bytes((FIXTURES / "regular_2007.evt").read_bytes())
+    file_b.write_bytes((FIXTURES / "negro_league.evt").read_bytes())
+    monkeypatch.chdir(tmp_path)
+    argv = ["cwevent", "-y", "2007", "-n", str(file_a), str(file_b)]
+
+    want: list[str] = []
+    assert (
+        main(TOOLS["cwevent"], ["cwevent", "-j", "1", *argv[1:]], IO(want.append, [].append)) == 0
+    )
+
+    import concurrent.futures
+
+    monkeypatch.setattr(concurrent.futures, "ProcessPoolExecutor", _DiesAfterFirst)
+    got: list[str] = []
+    status = main(TOOLS["cwevent"], ["cwevent", "-j", "2", *argv[1:]], IO(got.append, [].append))
+    assert status == 0
+    assert "".join(got) == "".join(want)
