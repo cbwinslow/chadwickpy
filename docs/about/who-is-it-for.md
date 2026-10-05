@@ -17,8 +17,9 @@ description: Who chadwickpy is for - researchers, data scientists and developers
 
 ## Use something else if you
 
-* process **many seasons repeatedly** and speed matters more than convenience: the C tools are
-  about 25 times faster (see [compared with Chadwick](compared-with-chadwick.md));
+* process **many seasons repeatedly** and speed matters more than convenience: per core the C tools
+  are about 10 to 40 times faster, and they can also be run on several cores
+  (see [compared with Chadwick](compared-with-chadwick.md));
 * want **ready-made tables with no tool at all**: Retrosheet publishes its own CSV downloads,
   which use Retrosheet's columns rather than Chadwick's;
 * want **pitch-by-pitch tracking data** (velocity, spin, location): Retrosheet event files

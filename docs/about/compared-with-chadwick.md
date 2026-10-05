@@ -28,6 +28,24 @@ The benchmark below compares original Chadwick C (0.10.0) against `chadwickpy` o
 | **chadwickpy** (sequential, `-j 1`) | 20.04 s | ~9,400 plays/s | 100% byte-for-byte identical |
 | **chadwickpy** (default auto-parallel) | **2.34 s** | **~80,700 plays/s** | **100% byte-for-byte identical** |
 
+### One core, every tool
+
+Measured on one core (`-j 1`) against the C tools, whole 2025 season, default output, on a busy
+40-core machine, so treat the ratios as approximate:
+
+| Tool | C | chadwickpy `-j 1` | Slower by |
+|---|---|---|---|
+| `cwevent` | 2.4 s | 27.2 s | about 11x |
+| `cwgame` | 1.3 s | 40.3 s | about 31x |
+| `cwdaily` | 2.3 s | 38.3 s | about 17x |
+| `cwsub` | 0.6 s | 14.4 s | about 24x |
+| `cwcomment` | 0.5 s | 13.6 s | about 27x |
+| `cwbox` | 1.6 s | 34.8 s | about 22x |
+
+Across the seasons measured the ratio ran from about 5x to 38x. The C tools can also be run on several
+cores (one process per team file): on the same machine that took `cwevent` about 0.5 s for a season,
+so the "matches C" result above is against C on a single core.
+
 ### How to reproduce this benchmark
 
 1. Download and unzip the 2024 Retrosheet season files into a folder:
