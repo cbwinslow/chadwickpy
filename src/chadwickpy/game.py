@@ -291,8 +291,18 @@ def read_game(file: CFile) -> Game | None:
         if buf.startswith("play,"):
             nul = buf.find("\0")
             s = buf if nul < 0 else buf[:nul]
-            parts = s.rstrip("\r\n").split(",", 6)
-            if len(parts) == 7 and '"' not in s:
+            body = s.rstrip("\r\n")
+            parts = body.split(",")
+            # Fast path only where it is identical to the tokenizer: exactly six fields after the
+            # record type (the tokenizer ignores anything past the sixth), no quotes, no stray
+            # CR/LF inside, and no field starting with a space or tab (the tokenizer skips those).
+            if (
+                len(parts) == 7
+                and '"' not in body
+                and "\r" not in body
+                and "\n" not in body
+                and not any(p[:1] in (" ", "\t") for p in parts[1:])
+            ):
                 p_inn, p_team, p_batter, p_count, p_pitches, p_play = parts[1:]
                 game.events.append(
                     Event(cw_atoi(p_inn), cw_atoi(p_team), p_batter, p_count, p_pitches, p_play)
