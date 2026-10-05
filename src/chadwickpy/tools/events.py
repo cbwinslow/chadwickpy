@@ -46,6 +46,8 @@ def _cmod(a: int, b: int) -> int:
 class _Ctx:
     """What a field function needs: the iterator, the lookahead cache and rosters."""
 
+    __slots__ = ("gi", "visitors", "home", "_fates", "_future", "_trunc")
+
     def __init__(self, gi: GameIter, visitors: Roster | None, home: Roster | None) -> None:
         self.gi = gi
         self.visitors = visitors
@@ -575,17 +577,21 @@ DEFAULT_FIELDS = (
 )
 
 
+_ALL_FIELDS: tuple[tuple[str, Field], ...] = _STANDARD + _EXTENDED
+
+
 def game_rows(
     game: Game, visitors: Roster | None = None, home: Roster | None = None
 ) -> Iterator[dict[str, str]]:
     """``cwevent_process_game``: one row per non-NP event of the game."""
     gi = GameIter(game)
+    ctx = _Ctx(gi, visitors, home)
     while gi.event is not None:
         if gi.event.event_text == "NP":
             gi.next()
             continue
-        ctx = _Ctx(gi, visitors, home)
-        yield {name: fn(ctx) for name, fn in _STANDARD + _EXTENDED}
+        ctx._fates = ctx._future = ctx._trunc = None
+        yield {name: fn(ctx) for name, fn in _ALL_FIELDS}
         gi.next()
 
 
@@ -778,34 +784,45 @@ _FORMATS: tuple[tuple[str, str] | None, ...] = (
 
 
 @cache
-def _parse_conversion(fmt: str) -> tuple[str, str, bool, bool, int, str]:
-    """The text before and after the one ``%[-][0][width]{s,c,d}`` conversion of ``fmt``, and the
-    conversion's flags, width and kind (parsed once per distinct format)"""
+def _make_formatter(fmt: str) -> Callable[[str], str]:
+    """Compile one sprintf format into a fast formatting closure."""
     found = re.search(r"%(-?)(0?)(\d*)([scd])", fmt)
     assert found is not None
-    left, zero, width, kind = found.groups()
-    return (
-        fmt[: found.start()],
-        fmt[found.end() :],
-        bool(left),
-        bool(zero),
-        int(width) if width else 0,
-        kind,
-    )
+    left_str, zero_str, width_str, kind = found.groups()
+    before = fmt[: found.start()]
+    after = fmt[found.end() :]
+    left = bool(left_str)
+    zero = bool(zero_str)
+    w = int(width_str) if width_str else 0
+    if kind == "d":
+        if zero:
+            return lambda val: f"{before}{int(val):0{w}d}{after}"
+        elif left:
+            return lambda val: before + str(int(val)).ljust(w) + after
+        elif w > 0:
+            return lambda val: before + str(int(val)).rjust(w) + after
+        else:
+            return lambda val: before + str(int(val)) + after
+    else:
+        if left:
+            return lambda val: before + val.ljust(w) + after
+        elif w > 0:
+            return lambda val: before + val.rjust(w) + after
+        else:
+            return lambda val: before + val + after
+
+
+_ASCII_FORMATTERS: tuple[Callable[[str], str] | None, ...] = tuple(
+    (_make_formatter(f[0]) if f is not None else None) for f in _FORMATS
+)
+_FIXED_FORMATTERS: tuple[Callable[[str], str] | None, ...] = tuple(
+    (_make_formatter(f[1]) if f is not None else None) for f in _FORMATS
+)
 
 
 def _c_format(fmt: str, value: str) -> str:
-    """One ``sprintf`` conversion (``%s``, ``%c`` or ``%d`` with ``-``/``0`` flag and width) of
-    ``fmt`` applied to ``value``, with the text around it kept"""
-    before, after, left, zero, w, kind = _parse_conversion(fmt)
-    text = str(int(value)) if kind == "d" else value
-    if left:
-        text = text.ljust(w)
-    elif zero and kind == "d":
-        text = f"{int(value):0{w}d}"
-    else:
-        text = text.rjust(w)
-    return before + text + after
+    """One ``sprintf`` conversion of ``fmt`` applied to ``value``."""
+    return _make_formatter(fmt)(value)
 
 
 def _custom(index: int, ascii_: bool, c: _Ctx, value: str) -> str:
@@ -822,10 +839,10 @@ def _custom(index: int, ascii_: bool, c: _Ctx, value: str) -> str:
 
 
 def _render(index: int, ascii_: bool, c: _Ctx, value: str) -> str:
-    fmt = _FORMATS[index]
-    if fmt is None:
+    formatter = _ASCII_FORMATTERS[index] if ascii_ else _FIXED_FORMATTERS[index]
+    if formatter is None:
         return _custom(index, ascii_, c, value)
-    return _c_format(fmt[0] if ascii_ else fmt[1], value)
+    return formatter(value)
 
 
 def header_line(fields: Collection[int], ext_fields: Collection[int]) -> str:
@@ -847,16 +864,27 @@ def game_lines(
 ) -> Iterator[str]:
     """``cwevent_process_game``: one output line per non-NP event of the game"""
     gi = GameIter(game)
-    table = _STANDARD + _EXTENDED
     selected = [i for i in range(MAX_FIELD + 1) if i in fields]
     selected += [MAX_FIELD + 1 + i for i in range(MAX_EXT_FIELD + 1) if i in ext_fields]
+    formatters = _ASCII_FORMATTERS if ascii_ else _FIXED_FORMATTERS
+    handlers: list[Callable[[_Ctx], str]] = []
+    for i in selected:
+        fn = _ALL_FIELDS[i][1]
+        fmt = formatters[i]
+        if fmt is not None:
+            handlers.append((lambda f=fn, m=fmt: lambda c: m(f(c)))())
+        else:
+            handlers.append((lambda idx=i, f=fn: lambda c: _custom(idx, ascii_, c, f(c)))())
+
+    ctx = _Ctx(gi, visitors, home)
+    sep = "," if ascii_ else ""
     while gi.event is not None:
         if gi.event.event_text == "NP":
             gi.next()
             continue
-        ctx = _Ctx(gi, visitors, home)
-        parts = [_render(i, ascii_, ctx, table[i][1](ctx)) for i in selected]
-        yield ("," if ascii_ else "").join(parts)
+        ctx._fates = ctx._future = ctx._trunc = None
+        parts = [h(ctx) for h in handlers]
+        yield sep.join(parts)
         gi.next()
 
 

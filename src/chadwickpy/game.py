@@ -16,7 +16,7 @@ from chadwickpy.file import BUFSIZE, CFile, StrTok, cw_atoi
 log = logging.getLogger("chadwickpy")
 
 
-@dataclass
+@dataclass(slots=True)
 class Appearance:
     """``CWAppearance``: a start or sub record."""
 
@@ -27,7 +27,7 @@ class Appearance:
     pos: int
 
 
-@dataclass
+@dataclass(slots=True)
 class Comment:
     """``CWComment``: a ``com`` record, with the ``ej,`` and ``umpchange,`` fields split out."""
 
@@ -36,7 +36,7 @@ class Comment:
     umpchange: tuple[str | None, str | None, str | None] | None = None
 
 
-@dataclass
+@dataclass(slots=True)
 class Event:
     """``CWEvent``: one play record plus what trails it."""
 
@@ -56,6 +56,13 @@ class Event:
     presadj: list[str | None] = field(default_factory=lambda: [None] * 4)
     subs: list[Appearance] = field(default_factory=list)
     comments: list[Comment] = field(default_factory=list)
+    _parsed: object = None
+    runners: int = 0
+    outs: int = 0
+    location: str = ""
+    pickoff: int = 0
+    mark: int = 0
+    players: list[object] = field(default_factory=list)
 
 
 @dataclass
@@ -281,6 +288,41 @@ def read_game(file: CFile) -> Game | None:
             break
 
         line = buf
+        if buf.startswith("play,"):
+            nul = buf.find("\0")
+            s = buf if nul < 0 else buf[:nul]
+            parts = s.rstrip("\r\n").split(",", 6)
+            if len(parts) == 7 and '"' not in s:
+                p_inn, p_team, p_batter, p_count, p_pitches, p_play = parts[1:]
+                game.events.append(
+                    Event(cw_atoi(p_inn), cw_atoi(p_team), p_batter, p_count, p_pitches, p_play)
+                )
+                last: Event | None = game.events[-1]
+                if bat_hand != " " and bat_hand_batter == p_batter:
+                    _need_event(last, line).batter_hand = bat_hand
+                else:
+                    bat_hand, bat_hand_batter = " ", ""
+                if pit_hand != " ":
+                    ev = _need_event(last, line)
+                    ev.pitcher_hand = pit_hand
+                    ev.pitcher_hand_id = pit_hand_pitcher
+                    pit_hand, pit_hand_pitcher = " ", ""
+                if ladj_slot != 0:
+                    ev = _need_event(last, line)
+                    ev.ladj_align = ladj_align
+                    ev.ladj_slot = ladj_slot
+                    ladj_align = ladj_slot = 0
+                if auto_base != 0:
+                    ev = _need_event(last, line)
+                    ev.auto_base = auto_base
+                    ev.auto_runner_id = auto_runner
+                    auto_base, auto_runner = 0, ""
+                if any(p != "" for p in presadj):
+                    ev = _need_event(last, line)
+                    ev.presadj = [p if p != "" else None for p in presadj]
+                    presadj = ["", "", "", ""]
+                continue
+
         rtype = tok(buf)
         if rtype is None or rtype == "id":
             file.setpos(filepos)

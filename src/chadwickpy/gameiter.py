@@ -494,7 +494,11 @@ class GameIter:
             if ev.event_text != "NP":
                 self.state.batter_hand = ev.batter_hand
                 self.state.pitcher_hand = ev.pitcher_hand
-                self.data, self.parse_ok = parse_event(ev.event_text)
+                parsed = ev._parsed
+                if parsed is None:
+                    ev._parsed = parsed = parse_event(ev.event_text)
+                self.data = _copy_data(parsed[0])  # type: ignore[index]
+                self.parse_ok = parsed[1]  # type: ignore[index]
             else:
                 # very rare: an NP as the first play
                 self.parse_ok = True
@@ -553,7 +557,11 @@ class GameIter:
         if ev.event_text != "NP":
             st.batter_hand = ev.batter_hand
             st.pitcher_hand = ev.pitcher_hand
-            self.data, self.parse_ok = parse_event(ev.event_text)
+            parsed = ev._parsed
+            if parsed is None:
+                ev._parsed = parsed = parse_event(ev.event_text)
+            self.data = _copy_data(parsed[0])  # type: ignore[index]
+            self.parse_ok = parsed[1]  # type: ignore[index]
             d = self.data
             for i in (1, 2, 3):
                 if d.advance[i] == 0 and st.base_occupied(i) and not runner_put_out(d, i):
