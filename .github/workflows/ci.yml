@@ -72,6 +72,9 @@ jobs:
           export CHADWICK_BIN="$HOME/chadwick-parity-install/bin"
           export CHADWICK_SRC="$HOME/chadwick-parity/src"
           test -x "$CHADWICK_BIN/cwevent" || { echo "Chadwick build missing"; exit 1; }
+          # Without pipefail the pipe reports tee's status, so failing tests would still pass CI
+          # (0.2.0 was merged with "44 failed" in this very log).
+          set -o pipefail
           uv run --with pytest pytest -q -rs -p no:cacheprovider | tee pytest.out
           # A skipped parity test compared nothing: with Chadwick built, nothing may be skipped.
           if grep -q '^SKIPPED' pytest.out; then echo "tests were skipped"; exit 1; fi
