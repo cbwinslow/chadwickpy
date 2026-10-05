@@ -18,7 +18,7 @@
 [Retrosheet](https://www.retrosheet.org) publishes every play of every MLB game as text
 files. The [Chadwick](https://github.com/chadwickbureau/chadwick) tools turn those files into
 tables. **chadwickpy is those same six tools, rewritten in pure Python**: no compiler, no C
-library, no dependencies. Output is byte-identical to Chadwick on every season from 1910 to 2025.
+library, no dependencies. Output is byte-identical to Chadwick on every season from 1910 to 2025 (for inputs where the C behaves in a defined way).
 
 ```bash
 pip install chadwickpy            # or: uvx --from chadwickpy cwevent -h
