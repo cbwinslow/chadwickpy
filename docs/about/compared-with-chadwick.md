@@ -5,13 +5,13 @@ description: How chadwickpy differs from the original Chadwick C tools - speed (
 # Compared with Chadwick
 
 `chadwickpy` is a function-by-function translation of Chadwick's C source. The rule is
-"translate the C, never guess from output", so the results are the same.
+"translate the C, never guess from output", so the output matches wherever the C behaves in a defined way (see [where it differs](#where-it-intentionally-differs)).
 
 | | Chadwick (C) | chadwickpy |
 |---|---|---|
 | Install | build from source with a C compiler, or a system package | `pip install chadwickpy` |
 | Needs | compiler, autotools | Python 3.11+ |
-| Output | the reference | identical on every season 1910-2025, all six tools |
+| Output | the reference | identical on every season 1910-2025 for all six tools, for inputs where the C has defined behaviour |
 | Speed | `cwevent` on one team-season: 0.075 s | about 1.4 s (about 25 times slower) |
 | Commands | `cwevent`, `cwgame`, `cwdaily`, `cwsub`, `cwcomment`, `cwbox` | the same names and options |
 | Use from Python | via other wrappers | `import chadwickpy` |

@@ -34,4 +34,4 @@ A -- 22436
 | `-S` | SportsML |
 | `-i`, `-s`, `-e`, `-y`, `-q` | same filters as the other tools |
 
-`cwbox` reads the roster files for player names, so keep `TEAMyyyy` and the `.ROS` files next to the event file.
+`cwbox` reads the roster files for player names, so run it from the folder that holds `TEAMyyyy` and the `.ROS` files (the current folder, as in Chadwick).

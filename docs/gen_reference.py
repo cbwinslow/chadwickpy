@@ -26,6 +26,10 @@ def run(tool: str, flag: str) -> str:
         text=True,
         check=False,
     )
+    if out.returncode != 0:
+        raise RuntimeError(
+            f"`chadwickpy {tool} {flag}` exited with status {out.returncode}: {out.stderr.strip()}"
+        )
     text = out.stdout + out.stderr
     lines = text.splitlines()
     # drop Chadwick's copyright banner (first block) and keep the content

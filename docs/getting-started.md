@@ -56,8 +56,9 @@ cd retro2010
 
 Inside you will find one event file per team and season (`2010NYA.EVA`: the Yankees'
 home games; `.EVN` for National League teams), a `TEAM2010` file and one roster file per
-team (`NYA2010.ROS`). Keep them in the same folder: the tools read the rosters from the
-event file's folder.
+team (`NYA2010.ROS`). The tools look for `TEAM2010` and the roster files in the **folder you
+run the command from** (as the real Chadwick does), so run them from inside this folder, as the
+`cd` above does. Running from elsewhere gives `Can't find teamfile (team2010)`.
 
 ## 3. Run your first command
 

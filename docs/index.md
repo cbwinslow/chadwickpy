@@ -51,10 +51,10 @@ no compiler, no C library, no dependencies.
 pip install chadwickpy                  # or: uvx --from chadwickpy cwevent -h
 curl -O https://www.retrosheet.org/events/2010seve.zip
 unzip -q 2010seve.zip -d retro2010 && cd retro2010
-cwevent -y 2010 -n -f 0,2,4,10,14,29,34 2010NYA.EVA > yankees_events.csv
+cwevent -y 2010 -n -f 0,2,3,4,10,14,29,34 2010NYA.EVA > yankees_events.csv
 ```
 
-That is every plate appearance in the Yankees' 2010 home games as a CSV file.
+That is every event (each pitch-ending play, steal, pickoff and so on) in the Yankees' 2010 home games, as a CSV file.
 [Getting started](getting-started.md) explains each step.
 
 ## What you get
@@ -71,7 +71,7 @@ That is every plate appearance in the Yankees' 2010 home games as a CSV file.
 ## Why use it
 
 * **Same answers as Chadwick.** Its output was compared with the real tools on every season
-  from 1910 to 2025: no differences. [How it was checked](about/verification.md).
+  from 1910 to 2025: no differences, for inputs where the C tools behave in a defined way. [How it was checked](about/verification.md).
 * **Installs anywhere.** Windows, macOS, Linux, a notebook, a CI job. Python 3.11 or newer.
 * **Same commands.** `cwevent`, `cwgame`, `cwdaily`, `cwsub`, `cwcomment` and `cwbox`, with
   Chadwick's options, so existing tutorials and scripts work.
