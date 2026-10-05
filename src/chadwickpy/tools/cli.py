@@ -342,9 +342,11 @@ def _process_files_parallel(
     workers: int,
 ) -> int:
     from concurrent.futures import ProcessPoolExecutor
+    from concurrent.futures.process import BrokenProcessPool
 
     tasks = [(tool_name, opts, league, f) for f in files]
     overall_status = 0
+    written = 0  # files whose output has already been sent; never send those again
     try:
         with ProcessPoolExecutor(
             max_workers=workers,
@@ -358,10 +360,13 @@ def _process_files_parallel(
                     io.err(err_text)
                 if st != 0:
                     overall_status = st
-    except Exception:
-        # Fallback to sequential execution if multiprocessing encounters environment issues
+                written += 1
+    except (BrokenProcessPool, OSError, ImportError, NotImplementedError) as e:
+        # A worker died or processes cannot be started here. Finish the files not yet written
+        # one at a time, in order, so the output is the same as a normal run.
+        io.err(f"chadwickpy: parallel run failed ({e}); finishing the remaining files in order\n")
         tool = TOOLS[tool_name]
-        for filename in files:
+        for filename in files[written:]:
             process_scorebook(tool, opts, io, league, filename)
     return overall_status
 
