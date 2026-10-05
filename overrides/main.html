@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block extrahead %}
+  {% set title = page.title ~ " - " ~ config.site_name if page and page.title and not page.is_homepage else config.site_name ~ ": Retrosheet play-by-play to data tables" %}
+  {% set description = page.meta.description if page and page.meta and page.meta.description else config.site_description %}
+  {% set image = "https://cbwinslow.github.io/chadwickpy/assets/social-card.png" %}
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="{{ config.site_name }}">
+  <meta property="og:title" content="{{ title }}">
+  <meta property="og:description" content="{{ description }}">
+  <meta property="og:url" content="{{ page.canonical_url }}">
+  <meta property="og:image" content="{{ image }}">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="{{ title }}">
+  <meta name="twitter:description" content="{{ description }}">
+  <meta name="twitter:image" content="{{ image }}">
+  {% if page and page.is_homepage %}
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "chadwickpy",
+    "applicationCategory": "DeveloperApplication",
+    "operatingSystem": "Any (Python 3.11+)",
+    "description": "{{ config.site_description }}",
+    "url": "https://cbwinslow.github.io/chadwickpy/",
+    "downloadUrl": "https://pypi.org/project/chadwickpy/",
+    "license": "https://www.gnu.org/licenses/gpl-3.0.html",
+    "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD"}
+  }
+  </script>
+  {% endif %}
+{% endblock %}

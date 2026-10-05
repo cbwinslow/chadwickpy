@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Questions and ideas
+    url: https://github.com/cbwinslow/chadwickpy/discussions
+    about: Ask how to do something or suggest an idea.
+  - name: Security problem
+    url: https://github.com/cbwinslow/chadwickpy/security/advisories/new
+    about: Report a vulnerability privately (do not open a public issue).

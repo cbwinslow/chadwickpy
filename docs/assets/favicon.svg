@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="img" aria-label="chadwickpy logo: a baseball">
+  <circle cx="50" cy="50" r="46" fill="#fdf8ef" stroke="#14213d" stroke-width="6"/>
+  <g fill="none" stroke="#d62839" stroke-width="3.2" stroke-linecap="round">
+    <path d="M27 15 C41 31 41 69 27 85" stroke-dasharray="0.1 7.2"/>
+    <path d="M73 15 C59 31 59 69 73 85" stroke-dasharray="0.1 7.2"/>
+    <path d="M27 15 C41 31 41 69 27 85" stroke-width="1.6"/>
+    <path d="M73 15 C59 31 59 69 73 85" stroke-width="1.6"/>
+  </g>
+</svg>
