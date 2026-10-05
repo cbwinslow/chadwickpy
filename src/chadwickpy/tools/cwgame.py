@@ -177,6 +177,7 @@ def _day_of_week(a: bool, gi: GameIter, box: Boxscore, v: Roster | None, h: Rost
     y = year[0]
     if 0 < y <= 99:
         y += 1900  # assume that two-digit years are in the 20th century
+    gi.leftovers["year"] = y  # the C local `year`; see _start_time
     name = DAY_NAMES[_day_of_week_index(month[0], day[0], y)]
     return f'"{name}"' if a else name
 
@@ -189,8 +190,22 @@ def _start_time(a: bool, gi: GameIter, box: Boxscore, v: Roster | None, h: Roste
     minute = None
     if hour is not None and text[hour[1] : hour[1] + 1] == ":":
         minute = scan_int(text, hour[1] + 1)
-    if hour is None or minute is None:
+    if hour is None:
         raise ValueError(f"unparsable start time {text!r} (uninitialised values in Chadwick)")
+    if minute is None:
+        # sscanf("%d:%d") stopped before filling `min`, so the C prints whatever was in that stack
+        # slot. Retrosheet's Negro Leagues files hold times such as "0.375" (a spreadsheet
+        # fraction). In the reference build `min` shares its slot with the `year` local of the
+        # cwgame_day_of_week field that runs just before this one, so it prints year (checked
+        # against the C tool on those files: "0.375" gives 0*100 + 1947 in 1947). Without that
+        # field running first the slot holds something we cannot know.
+        year = gi.leftovers.get("year")
+        if year is None:
+            raise ValueError(
+                f"unparsable start time {text!r} (uninitialised value in Chadwick; "
+                "the day-of-week field did not run first)"
+            )
+        return _int_field(a, hour[0] * 100 + year, 4)
     return _int_field(a, hour[0] * 100 + minute[0], 4)
 
 
