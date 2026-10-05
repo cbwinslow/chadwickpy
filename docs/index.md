@@ -78,6 +78,10 @@ That is every event (each pitch-ending play, steal, pickoff and so on) in the Ya
 * **Usable from Python.** Import the parser and the row generators directly.
   See the [Python guide](guides/python-api.md).
 
+## Is it for you?
+
+See [who it is for](about/who-is-it-for.md) and how it compares with [other tools](about/alternatives.md).
+
 ## What to know first
 
 * It is **about 25 times slower** than the C version. One team-season takes seconds.

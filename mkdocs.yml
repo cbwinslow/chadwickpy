@@ -85,7 +85,9 @@ plugins:
           - guides/python-api.md: use it from Python
           - guides/recipes.md: worked examples
         About:
+          - about/who-is-it-for.md: who it suits and when to use something else
           - about/compared-with-chadwick.md: differences, speed, licence
+          - about/alternatives.md: other ways to work with Retrosheet data
           - about/verification.md: how output was verified
           - about/faq.md: frequently asked questions
 nav:
@@ -108,7 +110,9 @@ nav:
       - cwbox: reference/cwbox.md
       - Python library: reference/library.md
   - About:
+      - Who is it for?: about/who-is-it-for.md
       - Compared with Chadwick: about/compared-with-chadwick.md
+      - Other tools: about/alternatives.md
       - How it was verified: about/verification.md
       - FAQ: about/faq.md
       - Changelog: about/changelog.md
@@ -125,5 +129,7 @@ markdown_extensions:
   - pymdownx.tabbed:
       alternate_style: true
   - pymdownx.highlight
+  - pymdownx.snippets:
+      check_paths: true
 exclude_docs: |
   gen_reference.py
