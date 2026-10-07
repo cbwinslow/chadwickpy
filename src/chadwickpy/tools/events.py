@@ -820,11 +820,6 @@ _FIXED_FORMATTERS: tuple[Callable[[str], str] | None, ...] = tuple(
 )
 
 
-def _c_format(fmt: str, value: str) -> str:
-    """One ``sprintf`` conversion of ``fmt`` applied to ``value``."""
-    return _make_formatter(fmt)(value)
-
-
 def _custom(index: int, ascii_: bool, c: _Ctx, value: str) -> str:
     """The fields whose format depends on the play"""
     if index == 47:  # cwevent_batted_ball_type
@@ -836,13 +831,6 @@ def _custom(index: int, ascii_: bool, c: _Ctx, value: str) -> str:
     if not c.gi.state.base_occupied(base):
         return "0"
     return value if ascii_ else f"{int(value):2d}"
-
-
-def _render(index: int, ascii_: bool, c: _Ctx, value: str) -> str:
-    formatter = _ASCII_FORMATTERS[index] if ascii_ else _FIXED_FORMATTERS[index]
-    if formatter is None:
-        return _custom(index, ascii_, c, value)
-    return formatter(value)
 
 
 def header_line(fields: Collection[int], ext_fields: Collection[int]) -> str:

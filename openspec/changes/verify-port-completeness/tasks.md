@@ -11,7 +11,8 @@
 - [ ] 2.2 Sweep every available season 1871-2025 and record zero-difference results or findings
 - [~] 2.3 Add synthetic and fuzzed games targeting unreached branches from 1.3
   - Play parser done 2026-10-07: `tests/test_parse_targeted_differential.py` (hand-built plays vs the C parser, all agree) reaches every previously unreached `parse.py` line except 184 (read past end of play text) and 1103/1105 (final default batted-ball rule, which the C also runs but an earlier rule already fills in). Left as faithful mirrors of the C; to confirm unreachable or reach them.
-  - Still to do: unreached lines in box.py, cli.py, game.py, cwbox.py, cwgame.py, events.py (77->79, 82->84, 801, 825, 842-845).
+  - events.py reviewed 2026-10-07: `_c_format` and `_render` were never called anywhere (src, tests, docs), so removed; 230 event/CLI differential tests pass. The cache checks in `future_runs`/`truncated` (77, 82) and the left-justified `%d` formatter (801) cannot be reached because each value is read once per event and no field uses that format; kept as harmless.
+  - Still to do: unreached lines in box.py, cli.py, game.py, cwbox.py, cwgame.py.
 
 ## 3. Other tools
 
