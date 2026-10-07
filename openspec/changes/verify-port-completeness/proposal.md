@@ -1,3 +1,5 @@
+# Proposal: verify-port-completeness
+
 ## Why
 
 Current evidence (docs/about/verification.md) shows byte-identical output on 116 seasons across six

@@ -1,9 +1,13 @@
+# Tasks: verify-port-completeness
+
 ## 1. Inventory
 
 - [x] 1.1 List every function in the pinned C source (`tests/reference/c_inventory.py` -> `docs/about/c-inventory.txt`, 653 functions)
 - [x] 1.2 Review the 49 functions not found by name: 48 ported in another form, 1 platform gap (Windows wildcards); see `assessment.md`
 - [x] 1.3 Run the existing suite under `coverage.py` with branch coverage; list Python branches never reached
   - Result 2026-10-07: 96% overall (5489 statements, 181 missed; 2340 branches, 155 partly taken). pytest suite (627 passed) plus a six-season CLI sample (1915, 1950, 1976, 1998, 2007, 2022), worker processes included. Per-file gaps: box.py 32 lines, cli.py 25, parse.py 20, game.py 12, cwbox.py 13, cwgame.py 9; events.py 6.
+
+- [ ] 1.4 C branch inventory: run the gcov-instrumented C tools over the corpus (`tests/reference/gcov_run.py`), list C lines and branches reached and not reached, map each to Python or a documented omission; add to the coverage matrix
 
 ## 2. cwevent deep verification
 

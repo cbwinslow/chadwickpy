@@ -49,7 +49,7 @@ def variants(name: str) -> set[str]:
 
 def main(src: Path) -> None:
     py = py_text(Path(__file__).resolve().parents[2] / "src" / "chadwickpy")
-    total = missing = 0
+    total = missing = memory_only = 0
     for path in sorted((src / "src").rglob("*.c")):
         for name in c_functions(path):
             total += 1
@@ -60,8 +60,13 @@ def main(src: Path) -> None:
             memory = name.endswith("_cleanup") or name.endswith("_cleanup_tags")
             status = "ok" if found else ("n/a-mem" if memory else "MISSING")
             missing += status == "MISSING"
+            memory_only += status == "n/a-mem"
             print(f"{status:<8} {path.relative_to(src / 'src')}::{name}")
-    print(f"# total {total}, found {total - missing}, not found {missing}", file=sys.stderr)
+    print(
+        f"# total {total}, name found {total - missing - memory_only}, "
+        f"memory cleanup {memory_only}, not found {missing}",
+        file=sys.stderr,
+    )
 
 
 if __name__ == "__main__":

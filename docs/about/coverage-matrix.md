@@ -12,8 +12,9 @@ Checked against Chadwick commit `c685ab5` (the commit the parity tests use).
    (`src/cwlib`) and the six tools (`src/cwtools`), including the per-field functions the tools
    declare through the `DECLARE_FIELDFUNC` macro. The output is `c-inventory.txt`.
 2. Each C function is looked up in `src/chadwickpy` by name (the port keeps Chadwick's names,
-   without the `cw_` prefix, or as a method). `ok` means a Python definition or a docstring naming
-   it exists. `n/a-mem` means a C memory-cleanup function that Python does not need.
+   without the `cw_` prefix, or as a method). `ok` means the name appears as a whole word in the
+   Python source. That is a text search: it does not prove the match is a definition (a call or a
+   comment would also match), so `ok` is a pointer for review, not proof of a port. `n/a-mem` means a C memory-cleanup function that Python does not need.
 3. Output fields are checked a second way, by the tools themselves: the field list printed by
    `-d` is identical to the C tools' for `cwevent`, `cwgame`, `cwdaily`, `cwsub` and `cwcomment`
    (checked 2026-10-07).
