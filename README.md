@@ -18,7 +18,7 @@
 [Retrosheet](https://www.retrosheet.org) publishes every play of every MLB game as text
 files. The [Chadwick](https://github.com/chadwickbureau/chadwick) tools turn those files into
 tables. **chadwickpy is those same six tools, rewritten in pure Python**: no compiler, no C
-library, no dependencies. Output is byte-identical to Chadwick on every season from 1910 to 2025 (for inputs where the C behaves in a defined way).
+library, no dependencies. Output is byte-identical to Chadwick on every Retrosheet season that has game data, 1897 to 2025 (for inputs where the C behaves in a defined way).
 
 ```bash
 pip install chadwickpy            # or: uvx --from chadwickpy cwevent -h
@@ -43,17 +43,24 @@ cwevent -y 2010 -n -f 0,2,3,4,10,14,29,34 2010NYA.EVA > yankees_events.csv
 | `cwdaily` | player per game (batting, pitching, fielding) |
 | `cwsub` | substitution |
 | `cwcomment` | scorer comment |
-| `cwbox` | game, as a text, XML or SportsML box score |
+| `cwbox` | game, as a text or XML box score (SportsML is deprecated: Chadwick's own `-S` crashes) |
 
 Same command names and options as Chadwick. Also usable from Python
 (`from chadwickpy.tools.events import event_rows`).
 
 ## Good to know
 
-* **Speed**: Single-core processing is ~0.66 s per team-season. When processing multiple files (such as a full season), `chadwickpy` **automatically parallelizes across available CPU cores**, processing an entire 2,430-game season in a few seconds on a multi-core machine. That matches the C tools on *one* core; per core, chadwickpy is about 10 to 40 times slower than C.
-* Override parallelism anytime via `-j <workers>` (e.g. `-j 1` for sequential) or the `CHADWICK_JOBS` environment variable.
+* **Speed**: on one core chadwickpy is roughly 10 to 40 times slower than the C tools. With several files
+  (a whole season) it **uses several cores by itself**: a full 2,430-game season takes about 2 seconds
+  on a multi-core machine, the same as the C tools on *one* core. The output is identical at every core
+  count (checked from 1 to 40). See [the cores guide](https://cbwinslow.github.io/chadwickpy/guides/parallel/).
+* Choose the number of workers with `-j <workers>` (`-j 1` is sequential) or the `CHADWICK_JOBS`
+  environment variable. By default it follows the CPUs the process may use, including a CPU limit set
+  by Docker, Kubernetes or systemd.
 * It reads Retrosheet's files; it does not include or download them.
-* Pure Python (zero dependencies). Python 3.11 or newer (also fully compatible with PyPy 3.10+ and Python 3.13+ JIT). Linux, macOS and Windows.
+* Pure Python, zero dependencies. Python 3.11 or newer; CI runs Python 3.11 to 3.13 on Linux, and it was
+  also checked on 3.14. It should work on macOS and Windows too (on Windows it expands wildcards such as
+  `2010*.EV*` itself, as the C tools do), but those are not part of the automated tests.
 
 ## Documentation
 
@@ -63,10 +70,18 @@ Machine-readable: [`llms.txt`](https://cbwinslow.github.io/chadwickpy/llms.txt).
 
 ## Verification
 
-`tests/` compares every tool with captured real-Chadwick output, and with the real programs
-when they are available (`CHADWICK_BIN`, `CHADWICK_SRC`). CI builds Chadwick at commit
-`c685ab5` and runs the whole suite on Python 3.11-3.13, failing on any skipped parity test.
-Run it yourself: `uv run --with pytest pytest`.
+Output is compared byte for byte (standard output, error messages and exit status) with the real
+Chadwick programs, built from commit `c685ab5`:
+
+* every season with game data, 1897 to 2025, all six tools and 16 option sets (2,064 comparisons);
+* every output field of every tool on its own and in combination, both output formats, and every
+  game-selection option;
+* tests aimed at every remaining branch of the code: **99% of the lines and branches are reached**, and
+  the rest are listed with the reason they cannot be;
+* a weekly check against the newest Chadwick, and a test that fails when any C function changes.
+
+Details and how to run them yourself: [How it was verified](https://cbwinslow.github.io/chadwickpy/about/verification/).
+CI builds Chadwick and runs the whole suite on Python 3.11-3.13, failing on any skipped parity test.
 
 ## Licence and credit
 

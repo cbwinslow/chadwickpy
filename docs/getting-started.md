@@ -54,6 +54,8 @@ unzip -q 2010seve.zip -d retro2010
 cd retro2010
 ```
 
+On Windows, `cmd.exe` does not expand `*`; chadwickpy does it for you, so `2010*.EV*` works there too.
+
 Inside you will find one event file per team and season (`2010NYA.EVA`: the Yankees'
 home games; `.EVN` for National League teams), a `TEAM2010` file and one roster file per
 team (`NYA2010.ROS`). The tools look for `TEAM2010` and the roster files in the **folder you

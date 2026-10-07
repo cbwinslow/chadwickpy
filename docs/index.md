@@ -66,13 +66,13 @@ That is every event (each pitch-ending play, steal, pickoff and so on) in the Ya
 | [`cwdaily`](guides/games-and-players.md) | player per game | game logs: batting, pitching and fielding lines |
 | [`cwsub`](guides/subs-and-comments.md) | substitution | pinch hitters, pitching changes, defensive swaps |
 | [`cwcomment`](guides/subs-and-comments.md) | comment | scorer notes and ejections |
-| [`cwbox`](guides/box-scores.md) | game | text, XML or SportsML box scores |
+| [`cwbox`](guides/box-scores.md) | game | text or XML box scores (SportsML is deprecated) |
 
 ## Why use it
 
 * **Same answers as Chadwick.** Its output was compared with the real tools on every season
-  from 1910 to 2025: no differences, for inputs where the C tools behave in a defined way. [How it was checked](about/verification.md).
-* **Installs anywhere.** Windows, macOS, Linux, a notebook, a CI job. Python 3.11 or newer.
+  that has game data (1897 to 2025): no differences, for inputs where the C tools behave in a defined way. [How it was checked](about/verification.md).
+* **Installs anywhere Python runs.** A notebook, a CI job, a laptop with no compiler. Python 3.11 or newer (the automated tests run on Linux).
 * **Same commands.** `cwevent`, `cwgame`, `cwdaily`, `cwsub`, `cwcomment` and `cwbox`, with
   Chadwick's options, so existing tutorials and scripts work.
 * **Usable from Python.** Import the parser and the row generators directly.
@@ -86,8 +86,9 @@ See [who it is for](about/who-is-it-for.md) and how it compares with [other tool
 
 * On one core it is **about 10 to 40 times slower** than the C tools, depending on the tool (a whole
   season takes 14 to 40 seconds). With several files it uses several cores by itself, which brings a
-  season to a few seconds on a multi-core machine. See
-  [compared with Chadwick](about/compared-with-chadwick.md) for the measured numbers.
+  season to a few seconds on a multi-core machine, and it respects CPU limits set by Docker or
+  Kubernetes. See [compared with Chadwick](about/compared-with-chadwick.md) for the measured numbers and
+  [using several cores](guides/parallel.md) to control it.
 * It reads the data files; it does not download them. Get them from
   [Retrosheet](https://www.retrosheet.org/game.htm) (see the credit notice on the
   [FAQ](about/faq.md)).
