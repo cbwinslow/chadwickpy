@@ -24,7 +24,6 @@ sys.path.insert(0, str(HERE))
 from lint_dump import dump  # noqa: E402
 from test_box_targeted_differential import game  # noqa: E402
 from test_lint_differential import (  # noqa: E402
-    build,
     c_dump,
     c_is_defined,
     harness,  # noqa: F401  (fixture)
@@ -33,10 +32,9 @@ from test_lint_differential import (  # noqa: E402
     sanitized,  # noqa: F401  (fixture)
 )
 
-import chadwickpy
-from chadwickpy.guard import check_event_file
+import chadwickpy  # noqa: E402
+from chadwickpy.guard import check_event_file  # noqa: E402
 
-_ = build  # re-exported for the fixtures above
 
 VISITOR1 = 'start,v1,"V N1",0,1,8\n'
 DEFINED = {
