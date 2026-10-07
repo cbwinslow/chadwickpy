@@ -22,7 +22,7 @@ from chadwickpy.file import cw_atoi
 from chadwickpy.game import Game
 from chadwickpy.gameiter import GameIter
 from chadwickpy.roster import League
-from chadwickpy.tools.tools import iterate_games
+from chadwickpy.tools.tools import cut_at_nul, date_digits, iterate_games
 
 Field = Callable[[bool, GameIter, Boxscore, int, int, int, BoxPlayer], str]
 
@@ -46,9 +46,9 @@ def _date(
     a: bool, gi: GameIter, box: Boxscore, team: int, slot: int, seq: int, p: BoxPlayer
 ) -> str:
     date = gi.game.info_lookup("date")
-    if date is None or len(date) < 10:
-        raise ValueError(f"game {gi.game.game_id} has no usable date (undefined in Chadwick)")
-    text = date[0:4] + date[5:7] + date[8:10]
+    if date is None:
+        raise ValueError(f"game {gi.game.game_id} has no date (Chadwick would crash)")
+    text = date_digits(date)
     return f'"{text}"' if a else text
 
 
@@ -445,7 +445,9 @@ def game_lines(
             seq = 1
             while player is not None:
                 sep = "," if ascii_ else ""
-                yield sep.join(FIELDS[i][0](ascii_, gi, box, team, j, seq, player) for i in fields)
+                yield cut_at_nul(
+                    sep.join(FIELDS[i][0](ascii_, gi, box, team, j, seq, player) for i in fields)
+                )
                 player = player.next
                 seq += 1
 

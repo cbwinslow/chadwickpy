@@ -113,6 +113,11 @@ def _print_header(game: Game, visitors: Roster | None, home: Roster | None) -> s
 
 
 def _position(code: int) -> str:
+    if code == -1:
+        # A missing position is -1. ``positions[-1]`` reads the three bytes in front of the C table
+        # (``char positions[][3]``); in the reference build they are zero, so the C prints nothing
+        # (checked on a game with a ``dline`` whose position is "?").
+        return ""
     if not 0 <= code < len(POSITIONS):
         raise ValueError(f"position {code} out of range (undefined behaviour in C)")
     return POSITIONS[code]

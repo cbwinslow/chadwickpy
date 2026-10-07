@@ -455,6 +455,9 @@ class GameIter:
         self.state = State()
         self.data = EventData()
         self.parse_ok = True
+        # Values a C tool leaves behind in local variables that a later field function then reads
+        # without setting them (cwgame_start_time reads the year that cwgame_day_of_week left).
+        self.leftovers: dict[str, int] = {}
         self._reset()
 
     @property

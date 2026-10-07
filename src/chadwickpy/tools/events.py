@@ -302,7 +302,7 @@ def _fielded_by_id(c: _Ctx) -> str:
 
 def _team_id(c: _Ctx, which: str) -> str:
     g = c.gi.game
-    return g.info_lookup(which) or "(null)"
+    return _s(g.info_lookup(which))  # only a missing record is "(null)", not an empty value
 
 
 def _base_state_end(c: _Ctx) -> str:
@@ -378,7 +378,7 @@ def _uncertain(c: _Ctx) -> str:
 # (column, function) in cwevent field order: standard fields 0-96
 _STANDARD: tuple[tuple[str, Field], ...] = (
     ("GAME_ID", lambda c: c.gi.game.game_id),
-    ("AWAY_TEAM_ID", lambda c: c.gi.game.info_lookup("visteam") or "(null)"),
+    ("AWAY_TEAM_ID", lambda c: _s(c.gi.game.info_lookup("visteam"))),
     ("INN_CT", lambda c: str(c.gi.event.inning)),  # type: ignore[union-attr]
     ("BAT_HOME_ID", lambda c: str(c.gi.event.batting_team)),  # type: ignore[union-attr]
     ("OUTS_CT", lambda c: str(c.gi.state.outs)),
@@ -466,7 +466,7 @@ _STANDARD: tuple[tuple[str, Field], ...] = (
     ("REMOVED_FOR_PH_BAT_ID", lambda c: c.gi.state.removed_for_ph or ""),
     (
         "REMOVED_FOR_PH_BAT_FLD_CD",
-        lambda c: str(c.gi.state.removed_position if c.gi.state.removed_for_ph else 0),
+        lambda c: str(c.gi.state.removed_position if c.gi.state.removed_for_ph is not None else 0),
     ),
     ("PO1_FLD_CD", _putout(0)),
     ("PO2_FLD_CD", _putout(1)),
