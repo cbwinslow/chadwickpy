@@ -5,7 +5,7 @@
 - [ ] Every season we have (1908-2025) gives byte-identical output to the C tools for all six tools, run on the fixed code with no coverage tooling (whole-corpus run, task 2.2)
 - [ ] Every field and option combination of every tool matches the C tools (tasks 2.1, 3.1) - cwevent done, others partly
 - [ ] Every line of the port is either reached by a test that compares with C, or recorded as unreachable with a reason (tasks 1.3, 2.3) - parser, cli, game, box done
-- [ ] Every C function is accounted for: ported, or omitted with a reason (task 1.2 done; Windows wildcards, task 4.4, open)
+- [x] Every C function is accounted for: ported, or omitted with a reason (task 1.2 and the Windows wildcards, task 4.4)
 - [ ] A newer Chadwick cannot change unnoticed (task 4.5 done)
 - [ ] Parallel mode is correct on any machine: start methods, any job count, any number of cores, container CPU limits decided (task 4.6)
 - [ ] Timings recorded per tool and core count, and the single-core speed decision recorded as an ADR (tasks 4.1, 4.2)
@@ -47,7 +47,8 @@
 - [ ] 4.1 Record single-core and parallel timings with core count for each tool in `docs/about/verification.md`
 - [ ] 4.2 Record the owner's decision on single-core speed as an ADR
 - [ ] 4.3 Run `uv run pytest`, ruff and mypy; inspect the diff; open a PR
-- [ ] 4.4 Port or explicitly omit Windows wildcard expansion (`cwtools_process_filespec`), test first
+- [x] 4.4 Port or explicitly omit Windows wildcard expansion (`cwtools_process_filespec`), test first
+  - Ported 2026-10-07: `expand_filespec` in cli.py; on Windows `*` and `?` are expanded (matches in name order; a pattern or name matching nothing is skipped silently, as in the C); on Unix names pass through unchanged. 13 tests in `tests/test_filespec.py` (written first, failed, then passed) run the Windows behaviour on Linux with the platform check switched on, and check that a wildcard run equals naming the files for all six tools. Deliberate difference from the C: it keeps only the bare file name from `_findfirst`, so `sub\\*.EVA` would look for the files in the current directory; the port keeps the directory. Not testable against the real C here (needs a Windows build).
 - [x] 4.5 Add an upstream-drift test: inventory a newer Chadwick and fail on C functions with no Python counterpart
   - Done 2026-10-07, redesigned: the name lookup is too loose to detect drift (it counted a brand-new function as ported because its last word, `function`, appears in a docstring; 191 of the 603 name matches rest on generic words such as `help` or `cleanup`). Instead `tests/test_upstream_drift.py` compares a fingerprint of every C function (`docs/about/c-function-hashes.txt`, 653 functions, made by `python tests/reference/c_inventory.py --hashes CHECKOUT`) and names every function added, removed or changed. Checked against a doctored copy of the C source: one added, one renamed (added + removed) and one modified function are each reported. `.github/workflows/upstream-drift.yml` runs the whole suite weekly against the newest Chadwick.
 - [~] 4.6 Parallel robustness on any machine (owner request 2026-10-07)

@@ -19,6 +19,7 @@ port stops at 5. ``-m`` appears in the help of ``cwsub`` and ``cwcomment`` but, 
 not an option.
 """
 
+import glob
 import logging
 import os
 import signal
@@ -391,6 +392,25 @@ def available_cpus() -> int:
         return os.cpu_count() or 1
 
 
+def _is_windows() -> bool:
+    return os.name == "nt"
+
+
+def expand_filespec(spec: str, windows: bool | None = None) -> list[str]:
+    """``cwtools_process_filespec``: the files a command-line name stands for.
+
+    On Unix the C program processes the name as given (the shell has already expanded any
+    wildcard). On Windows and DOS it expands ``*`` and ``?`` itself (``_findfirst``), because
+    ``cmd.exe`` does not: every match is used, in name order, and a name or pattern that matches
+    nothing is skipped silently. Unlike the C, which keeps only the bare file name, the directory
+    part of a pattern is kept so that ``sub\\*.EVA`` finds its files.
+    """
+    if not (_is_windows() if windows is None else windows):
+        return [spec]
+    # only * and ? are wildcards here; glob would also treat [ ] specially
+    return sorted(glob.glob(spec.replace("[", "[[]")))
+
+
 def worker_count(n_files: int, jobs: int | None) -> int:
     """How many worker processes to use for ``n_files`` files.
 
@@ -429,7 +449,7 @@ def main(tool: Tool, argv: list[str] | None = None, io: IO | None = None) -> int
             doc = XMLDoc("sports-content-set")
             tool.state["doc"] = doc
             io.out(doc.take())
-        files = args[i:]
+        files = [name for spec in args[i:] for name in expand_filespec(spec)]
         env_jobs = os.environ.get("CHADWICK_JOBS")
         if env_jobs is not None and opts.jobs is None:
             opts.jobs = (
