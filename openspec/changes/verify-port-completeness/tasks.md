@@ -11,7 +11,9 @@
 
 ## 2. cwevent deep verification
 
-- [ ] 2.1 Test every `-f`/`-x` field and option combination against the C tool on a mixed-era sample, tests first
+- [~] 2.1 Test every `-f`/`-x` field and option combination against the C tool on a mixed-era sample, tests first
+  - Fields done 2026-10-07: `tests/test_event_field_sweep.py` (378 tests, 36 s): each of the 97 standard and 67 extended fields requested alone, ASCII and fixed-width, plus 50 random subsets (half with synthesised rosters), on all 10 fixture files (every era and rule variant). All byte-identical to the real cwevent. Mutation check: breaking `FATE_RUNS_CT` makes 4 of them fail, so the sweep does detect a wrong field.
+  - Still to do: other option combinations (dates -s/-e, -q, -d, roster and team options together with fields), then real seasons across eras instead of fixtures.
 - [ ] 2.2 Sweep every available season 1871-2025 and record zero-difference results or findings
 - [~] 2.3 Add synthetic and fuzzed games targeting unreached branches from 1.3
   - Play parser done 2026-10-07: `tests/test_parse_targeted_differential.py` (hand-built plays vs the C parser, all agree) reaches every previously unreached `parse.py` line except 184 (read past end of play text) and 1103/1105 (final default batted-ball rule, which the C also runs but an earlier rule already fills in). Left as faithful mirrors of the C; to confirm unreachable or reach them.
