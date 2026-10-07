@@ -84,8 +84,10 @@ See [who it is for](about/who-is-it-for.md) and how it compares with [other tool
 
 ## What to know first
 
-* It is **about 25 times slower** than the C version. One team-season takes seconds.
-  See [compared with Chadwick](about/compared-with-chadwick.md).
+* On one core it is **about 10 to 40 times slower** than the C tools, depending on the tool (a whole
+  season takes 14 to 40 seconds). With several files it uses several cores by itself, which brings a
+  season to a few seconds on a multi-core machine. See
+  [compared with Chadwick](about/compared-with-chadwick.md) for the measured numbers.
 * It reads the data files; it does not download them. Get them from
   [Retrosheet](https://www.retrosheet.org/game.htm) (see the credit notice on the
   [FAQ](about/faq.md)).
