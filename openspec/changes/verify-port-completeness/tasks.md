@@ -25,7 +25,9 @@
 
 ## 3. Other tools
 
-- [ ] 3.1 Repeat 2.1-2.3 for cwgame, then cwbox, then cwdaily, cwsub, cwcomment
+- [~] 3.1 Repeat 2.1-2.3 for cwgame, then cwbox, then cwdaily, cwsub, cwcomment
+  - Fields done 2026-10-07: `tests/test_field_sweep_other_tools.py` (822 tests, 3 min): cwgame (85 standard + 97 extended), cwdaily (154), cwsub (25), cwcomment (10) fields each alone, ASCII with header and fixed-width, plus 10 random subsets per tool, on all 10 fixtures; stdout, stderr and exit status identical to the real tools. Mutation check: breaking one cwdaily helper fails 258 tests.
+  - Still to do for 3.1: option combinations (as `test_event_option_sweep` for cwevent) for the four tools; cwbox (text and XML) option and content sweeps.
 
 ## 4. Performance and wrap-up
 
