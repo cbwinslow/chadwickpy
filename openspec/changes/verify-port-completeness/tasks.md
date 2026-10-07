@@ -4,7 +4,7 @@
 
 - [x] Every season with play-by-play files (1908-2025) gives byte-identical output to the C tools for all six tools, run on the fixed code with no coverage tooling (whole-corpus run, task 2.2). Box-score-only years 1897-1907 (nothing earlier has games): task 2.2b, done
 - [ ] Every field and option combination of every tool matches the C tools (tasks 2.1, 3.1) - cwevent done, others partly
-- [ ] Every line of the port is either reached by a test that compares with C, or recorded as unreachable with a reason (tasks 1.3, 2.3) - parser, cli, game, box done
+- [~] Every line of the port is either reached by a test that compares with C, or recorded as unreachable with a reason (tasks 1.3, 2.3; also the C side, task 1.4 done) - 97.3% measured; final batch with the agents
 - [x] Every C function is accounted for: ported, or omitted with a reason (task 1.2 and the Windows wildcards, task 4.4)
 - [ ] A newer Chadwick cannot change unnoticed (task 4.5 done)
 - [x] Parallel mode is correct on any machine: start methods, any job count, any number of cores, container CPU limits (task 4.6)
@@ -19,7 +19,9 @@
 - [x] 1.3 Run the existing suite under `coverage.py` with branch coverage; list Python branches never reached
   - Result 2026-10-07: 96% overall (5489 statements, 181 missed; 2340 branches, 155 partly taken). pytest suite (627 passed) plus a six-season CLI sample (1915, 1950, 1976, 1998, 2007, 2022), worker processes included. Per-file gaps: box.py 32 lines, cli.py 25, parse.py 20, game.py 12, cwbox.py 13, cwgame.py 9; events.py 6.
 
-- [ ] 1.4 C branch inventory: run the gcov-instrumented C tools over the corpus (`tests/reference/gcov_run.py`), list C lines and branches reached and not reached, map each to Python or a documented omission; add to the coverage matrix
+- [x] 1.4 C branch inventory: run the gcov-instrumented C tools over the corpus (`tests/reference/gcov_run.py`), list C lines and branches reached and not reached, map each to Python or a documented omission; add to the coverage matrix
+  - Done 2026-10-07. The six C tools built with `gcc --coverage` (no autotools needed: `libtool` missing, so compiled by hand as `tests/chadwick_tool.py` does) and run over every season 1908-2025 plus 1897-1907, 16 option sets each, plus the random option sweeps for seven seasons: 6802 + 176 runs, 14 killed by SIGSEGV (the known cwbox-text-on-box-score-only crash). Result: 805 C functions; 75.8% of the 7498 C lines and 74.6% of the 5796 branches executed overall. The tool files: cwevent 98.6%, cwgame 98.2%, cwdaily 98.3%, cwsub 98.4%, cwcomment 98.9%, cwboxxml 100%, cwbox 89.1% (the rest is SportsML). Library files not driven by the tools (game.c writing, roster.c, book.c, file.c) are lower, and are tested through the C test programs in `tests/reference/*.c` instead (write, reader, roster, box and lint differential tests).
+  - 65 C functions were never called by those runs (list: `docs/about/c-functions-not-run-by-corpus.txt`): about 30 are SportsML (out of scope, ADR-002); 19 are library functions covered by the C harness differential tests (writing event files and rosters, `cw_game_replace_player`, `cw_roster_*`...); the rest are memory cleanup, or C functions that no C tool calls. Three of those have **no Python counterpart** and were wrongly shown as `ok` by the loose name match: `cw_file_find_game` (file.c, a library helper nothing calls), `cw_pitch_thrown` (game.c, public helper nothing calls), `cwtools_default_parse_command_line` (cwtools.c, an unused generic parser). Decision: not ported. They are not used by any of the six tools, so they cannot change a tool's output; the port's scope is the six tools (ADR-001). Revisit if a library user needs them.
 
 ## 2. cwevent deep verification
 
