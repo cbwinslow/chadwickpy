@@ -255,7 +255,7 @@ def test_api_guards() -> None:
 
 
 # ``cwgame`` selects games by date before it prints a field, and the port's selection raises for a
-# game with no date or one that ``sscanf("%d/%d/%d")`` cannot read; so through the tool the day-of-week
+# game with no date or one that ``sscanf("%d/%d/%d")`` cannot read; so through the tool the dow
 # field never sees such a game. Called directly it guards the same C undefined behaviour (an
 # uninitialised read), which the port reports as an error. Unreachable: ``_date`` with no date
 # (line 45) and ``_day_of_week`` with no date (line 168), because ``box_create`` and ``GameIter``
