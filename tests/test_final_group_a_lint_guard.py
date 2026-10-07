@@ -35,7 +35,6 @@ from test_lint_differential import (  # noqa: E402
 import chadwickpy  # noqa: E402
 from chadwickpy.guard import check_event_file  # noqa: E402
 
-
 VISITOR1 = 'start,v1,"V N1",0,1,8\n'
 DEFINED = {
     "position_0": game().replace(VISITOR1, 'start,v1,"V N1",0,1,0\n'),
