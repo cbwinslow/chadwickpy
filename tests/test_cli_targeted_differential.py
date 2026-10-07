@@ -97,13 +97,18 @@ def check(tool: str, args: list[str], tmp: Path, setup=None) -> None:
     assert real[1] == port[1], "stdout"
 
 
-@pytest.mark.parametrize("case", CASES)
-@pytest.mark.parametrize("tool", ALL_TOOLS)
+# The real ``cwbox -S`` (SportsML, deprecated: ADR-002) crashes unless ``-X`` is also given.
+CLI_CASES = [
+    (tool, case)
+    for case, args in CASES.items()
+    for tool in ALL_TOOLS
+    if not (tool == "cwbox" and "-S" in args and "-X" not in args)
+]
+
+
+@pytest.mark.parametrize(("tool", "case"), CLI_CASES)
 def test_targeted_cli_matches_chadwick(tmp_path: Path, tool: str, case: str) -> None:
-    args = CASES[case]
-    if tool == "cwbox" and "-S" in args and "-X" not in args:
-        pytest.skip("the real cwbox -S crashes (see chadwick_tool.SPORTSML_PATCH)")
-    check(tool, args, tmp_path)
+    check(tool, CASES[case], tmp_path)
 
 
 BAD_STARTER = (
@@ -112,13 +117,15 @@ BAD_STARTER = (
 )
 
 
-@pytest.mark.parametrize("args", [["-S"], ["-X"], ["-S", "-X"], []])
-@pytest.mark.parametrize("tool", ALL_TOOLS)
+SANITY_CASES = [(tool, []) for tool in ALL_TOOLS] + [
+    ("cwbox", args) for args in (["-S"], ["-X"], ["-S", "-X"])
+]
+
+
+@pytest.mark.parametrize(("tool", "args"), SANITY_CASES)
 def test_game_failing_the_sanity_check(tmp_path: Path, tool: str, args: list[str]) -> None:
     """A game failing ``cw_game_lint`` is skipped; with ``cwbox -S`` that leaves a ``None``
     result to write (the real ``cwbox -S`` does not crash on it, unlike on a printed game)."""
-    if args and tool != "cwbox":
-        pytest.skip("cwbox options")
 
     def add(work: Path) -> None:
         (work / "bad.evt").write_bytes(BAD_STARTER)
