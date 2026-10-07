@@ -313,7 +313,10 @@ def _worker_scorebook(task: tuple[str, Options, League, str]) -> tuple[str, str,
     err_chunks: list[str] = []
     sub_io = IO(out=out_chunks.append, err=err_chunks.append)
     handler = _Stderr(sub_io)
-    log.addHandler(handler)
+    # A forked worker inherits the parent's handler, which writes straight to stderr: each warning
+    # would be printed a second time, early and out of order. Only this worker's handler may act.
+    inherited = log.handlers[:]
+    log.handlers[:] = [handler]
     prev_level = log.level
     log.setLevel(logging.WARNING)
     status = 0
@@ -328,7 +331,7 @@ def _worker_scorebook(task: tuple[str, Options, League, str]) -> tuple[str, str,
         sub_io.err(f"chadwickpy: unexpected error processing {filename}: {e}\n")
         status = 1
     finally:
-        log.removeHandler(handler)
+        log.handlers[:] = inherited
         log.setLevel(prev_level)
     return "".join(out_chunks), "".join(err_chunks), status
 
