@@ -12,7 +12,9 @@
 - [~] 2.3 Add synthetic and fuzzed games targeting unreached branches from 1.3
   - Play parser done 2026-10-07: `tests/test_parse_targeted_differential.py` (hand-built plays vs the C parser, all agree) reaches every previously unreached `parse.py` line except 184 (read past end of play text) and 1103/1105 (final default batted-ball rule, which the C also runs but an earlier rule already fills in). Left as faithful mirrors of the C; to confirm unreachable or reach them.
   - events.py reviewed 2026-10-07: `_c_format` and `_render` were never called anywhere (src, tests, docs), so removed; 230 event/CLI differential tests pass. The cache checks in `future_runs`/`truncated` (77, 82) and the left-justified `%d` formatter (801) cannot be reached because each value is read once per event and no field uses that format; kept as harmless.
-  - Still to do: unreached lines in box.py, cli.py, game.py, cwbox.py, cwgame.py.
+  - 2026-10-07, three subagents (own worktrees, results re-run and merged by me): `test_cli_targeted_differential.py` (cli.py/tools.py: every listed line hit), `test_game_targeted_differential.py` (game.py/cwgame.py: all but 4 lines), `test_box_targeted_differential.py` (box.py/cwbox.py: 42 of 54 hit). 409 targeted tests pass, 17 skipped on purpose (cwbox -S crashes in C). Lint clean.
+  - Unreachable or defensive, left in place as faithful to the C: game.py 286; cwgame.py 45, 168; box.py 426; cwbox.py 97, 117, 290, 374, 380 (reasons in the test file headers and the agent reports: guarded earlier, or inputs the library never produces).
+  - Open follow-up: a `line` record with 50 innings matches in plain text but `cwbox -X` output differs from C (49 innings match). Probably the C array overflow; confirm.
 
 ## 3. Other tools
 
