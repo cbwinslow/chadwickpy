@@ -305,9 +305,11 @@ def read_game(file: CFile) -> Game | None:
                 and not any(p[:1] in (" ", "\t") for p in parts[1:])
             ):
                 p_inn, p_team, p_batter, p_count, p_pitches, p_play = parts[1:]
-                game.events.append(
-                    Event(cw_atoi(p_inn), cw_atoi(p_team), p_batter, p_count, p_pitches, p_play)
-                )
+                # The C evaluates the arguments of one call right to left, which fixes the order of
+                # the "invalid integer" warnings on stderr.
+                team_n = cw_atoi(p_team)
+                inning_n = cw_atoi(p_inn)
+                game.events.append(Event(inning_n, team_n, p_batter, p_count, p_pitches, p_play))
                 last: Event | None = game.events[-1]
                 if bat_hand != " " and bat_hand_batter == p_batter:
                     _need_event(last, line).batter_hand = bat_hand
@@ -353,9 +355,10 @@ def read_game(file: CFile) -> Game | None:
                 pid, name, team, slot, pos = f
                 assert pid is not None and name is not None
                 assert team is not None and slot is not None and pos is not None
-                game.starters.append(
-                    Appearance(pid, name, cw_atoi(team), cw_atoi(slot), cw_atoi(pos))
-                )
+                pos_n = cw_atoi(pos)  # the C evaluates the arguments right to left
+                slot_n = cw_atoi(slot)
+                team_n = cw_atoi(team)
+                game.starters.append(Appearance(pid, name, team_n, slot_n, pos_n))
         elif rtype == "play":
             f = [tok(None) for _ in range(6)]
             inning, batting_team, batter, count, pitches, play = f
@@ -367,9 +370,9 @@ def read_game(file: CFile) -> Game | None:
                 and pitches is not None
                 and play is not None
             ):
-                game.events.append(
-                    Event(cw_atoi(inning), cw_atoi(batting_team), batter, count, pitches, play)
-                )
+                team_n = cw_atoi(batting_team)  # right to left, as the C evaluates the arguments
+                inning_n = cw_atoi(inning)
+                game.events.append(Event(inning_n, team_n, batter, count, pitches, play))
             # the C dereferences ``last_event`` and ``batter`` here without checking them
             last = game.events[-1] if game.events else None
             if bat_hand != " " and batter is not None and bat_hand_batter == batter:
@@ -402,8 +405,11 @@ def read_game(file: CFile) -> Game | None:
                 pid, name, team, slot, pos = f
                 assert pid is not None and name is not None
                 assert team is not None and slot is not None and pos is not None
+                pos_n = cw_atoi(pos)  # the C evaluates the arguments right to left
+                slot_n = cw_atoi(slot)
+                team_n = cw_atoi(team)
                 _need_event(game.events[-1] if game.events else None, line).subs.append(
-                    Appearance(pid, name, cw_atoi(team), cw_atoi(slot), cw_atoi(pos))
+                    Appearance(pid, name, team_n, slot_n, pos_n)
                 )
         elif rtype == "com":
             comment = tok(None)
