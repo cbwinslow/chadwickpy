@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.3.0](https://github.com/cbwinslow/chadwickpy/compare/v0.2.1...v0.3.0) (2026-10-07)
+
+
+### Features
+
+* automatic worker count honours container CPU limits (Docker --cpus, Kubernetes, systemd; cgroup v1 and v2) ([f54941a](https://github.com/cbwinslow/chadwickpy/commit/f54941aec0855d6c15ab85ca437f0e3e4e73519e))
+* expand wildcard file names on Windows like cwtools_process_filespec ([f54941a](https://github.com/cbwinslow/chadwickpy/commit/f54941aec0855d6c15ab85ca437f0e3e4e73519e))
+
+
+### Bug Fixes
+
+* parallel workers printed every warning twice and out of order under fork (inherited log handler) ([f54941a](https://github.com/cbwinslow/chadwickpy/commit/f54941aec0855d6c15ab85ca437f0e3e4e73519e))
+
 ## [0.2.1](https://github.com/cbwinslow/chadwickpy/compare/v0.2.0...v0.2.1) (2026-10-07)
 
 
