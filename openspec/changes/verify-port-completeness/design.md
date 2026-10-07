@@ -23,3 +23,4 @@ differential tests live in `tests/test_*_differential.py` and `tests/reference/`
 - Full 1871-2025 sweeps are long single-core; run parallel and cache C outputs.
 - Retrosheet data not redistributed in the repo; sweeps are local/CI-optional, committed fixtures stay small.
 - Open question for the owner: is single-core speed (about 11x slower than C) acceptable for 1.0?
+- **Never edit the code under test while a long comparison runs.** The sweep scripts import the live editable install; a temporary mutation check in the middle of the 2026-10-07 whole-corpus run produced two false mismatches (1928 `cwdaily`). Run mutation checks before or after, or in a separate checkout.

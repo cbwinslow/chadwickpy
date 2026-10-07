@@ -27,3 +27,31 @@ To compare against the live C tools, build Chadwick at the pinned commit and set
 Python 3.11, 3.12 and 3.13, and fails if any parity test is skipped.
 
 The season-sweep scripts in `tests/reference/` need the Retrosheet decade archives.
+
+## Any number of cores
+
+The parallel run was checked by restricting the process to 1, 2, 3, 4, 5, 8, 16 and 40 cores
+(`taskset`) on 8 files of the 2023 season with every `cwevent` field: the output is byte-identical to
+the C program every time. Rough timings on a busy host: the C program 2.2 s on one core; chadwickpy
+22.5 s on one core, 12.1 s on two, 6.6 s on four, 3.7 s on sixteen. It never starts more workers than
+there are files, so a few files do not use many cores. Output is also identical when workers are
+started with `fork`, `spawn` or `forkserver`, and with any `-j` value.
+
+## Timings per tool
+
+All six tools on 8 files of the 2023 season with the default fields, on a busy 40-core host
+(seconds; output identical to the C program in every case). The C programs take well under a second;
+chadwickpy is a pure-Python translation and is slower, most of all on a single core.
+
+| Tool | C, 1 core | chadwickpy, 1 core | chadwickpy, 8 cores |
+| --- | --- | --- | --- |
+| cwevent | 0.3 | 7.3 | 2.1 |
+| cwgame | 0.4 | 10.2 | 3.1 |
+| cwdaily | 0.6 | 11.3 | 3.3 |
+| cwsub | 0.1 | 4.6 | 1.6 |
+| cwcomment | 0.1 | 4.7 | 1.4 |
+| cwbox | 0.4 | 10.8 | 2.7 |
+
+With every `cwevent` field requested the single-core gap is smaller (about 10 times). The speed
+decision for 1.0 is ADR-004.
+

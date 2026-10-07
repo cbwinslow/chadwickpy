@@ -1,0 +1,44 @@
+name: Upstream drift
+
+# Weekly: build the newest Chadwick and run the whole test suite against it. A red run means
+# Chadwick changed (a new, removed or modified C function, or different output) and chadwickpy
+# needs review before the next release. The pinned-commit parity jobs in ci.yml stay the merge gate.
+on:
+  schedule:
+    - cron: "17 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  newest-chadwick:
+    name: newest Chadwick, full suite
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0 # hatch-vcs reads the version from git tags
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          python-version: "3.12"
+          enable-cache: true
+      - name: Build the newest Chadwick
+        run: |
+          sudo apt-get install -y -q autoconf automake libtool
+          git clone --depth 1 https://github.com/chadwickbureau/chadwick.git "$HOME/chadwick-newest"
+          cd "$HOME/chadwick-newest"
+          echo "Chadwick commit: $(git rev-parse HEAD)"
+          autoreconf -i
+          ./configure --prefix="$HOME/chadwick-newest-install"
+          make -j2
+          make install
+      - name: Run the tests against it
+        run: |
+          export CHADWICK_BIN="$HOME/chadwick-newest-install/bin"
+          export CHADWICK_SRC="$HOME/chadwick-newest/src"
+          test -x "$CHADWICK_BIN/cwevent" || { echo "Chadwick build missing"; exit 1; }
+          set -o pipefail
+          uv run --with pytest pytest -q -rs -p no:cacheprovider | tee pytest.out
+          if grep -q '^SKIPPED' pytest.out; then echo "tests were skipped"; exit 1; fi
