@@ -157,6 +157,9 @@ class BoxPlayer:
         self.start_position = -1  # position in the starting lineup; -1 if not a starter
         self.positions = [0] * NUM_POSITIONS
         self.fielding: list[BoxFielding | None] = [None] * 10
+        # fielding[-k] in the C lands inside this same struct (on positions[]), so it works as an
+        # extra slot that nothing ever reads back out; see put_fielding.
+        self.stray_fielding: dict[int, BoxFielding] = {}
         self.prev: BoxPlayer | None = None
         self.next: BoxPlayer | None = None
 
@@ -166,6 +169,61 @@ class BoxPlayer:
             self.positions.extend([0] * (self.num_positions + 1 - len(self.positions)))
         self.positions[self.num_positions] = pos
         self.num_positions += 1
+
+
+_LOWEST_STRAY = (
+    -19
+)  # fielding[-19] is positions[2..3]; below that the C would overwrite lineup data
+
+
+def get_fielding(player: BoxPlayer, pos: int) -> BoxFielding | None:
+    """``player->fielding[pos]`` for a position taken from the data.
+
+    The C does not check ``pos``. Retrosheet writes a missing or unreadable position as -1, and
+    ``fielding[-1]`` is then the 8 bytes just before the array: ``positions[38]`` and
+    ``positions[39]`` of the same struct. The C survives and never reads those back as positions,
+    so the port keeps such entries in ``stray_fielding``. (Positions 10 and up would overwrite the
+    ``prev``/``next`` links, which the port cannot mimic, so they raise.)"""
+    if 0 <= pos <= 9:
+        return player.fielding[pos]
+    if _LOWEST_STRAY <= pos < 0:
+        return player.stray_fielding.get(pos)
+    raise ValueError(f"fielding position {pos} out of range (undefined behaviour in C)")
+
+
+def put_fielding(player: BoxPlayer, pos: int, value: BoxFielding) -> None:
+    """``player->fielding[pos] = value``; see :func:`get_fielding`."""
+    if 0 <= pos <= 9:
+        player.fielding[pos] = value
+    elif _LOWEST_STRAY <= pos < 0:
+        player.stray_fielding[pos] = value
+    else:
+        raise ValueError(f"fielding position {pos} out of range (undefined behaviour in C)")
+
+
+def set_position_slot(player: BoxPlayer, index: int, value: int) -> None:
+    """``player->positions[index] = value`` for an index taken from the data (``seq - 1``).
+
+    Retrosheet writes an unreadable sequence number as -1, so ``index`` is -2. In the C struct the
+    four ints in front of ``positions`` are ``ph_inn``, ``pr_inn``, ``num_positions`` and
+    ``start_position``, so ``positions[-1]`` is ``start_position``, ``[-2]`` is ``num_positions``,
+    ``[-3]`` is ``pr_inn`` and ``[-4]`` is ``ph_inn``: the write lands on that field."""
+    if index >= 0:
+        while index >= len(player.positions):
+            player.positions.append(0)
+        player.positions[index] = value
+    elif index == -1:
+        player.start_position = value
+    elif index == -2:
+        player.num_positions = value
+    elif index == -3:
+        player.pr_inn = value
+    elif index == -4:
+        player.ph_inn = value
+    else:
+        raise ValueError(
+            f"positions[{index}] is outside the player record (undefined behaviour in C)"
+        )
 
 
 class BoxPitcher:
@@ -297,11 +355,10 @@ def enter_starters(box: Boxscore, game: Game) -> None:
             player.positions[0] = app.pos
             player.start_position = app.pos
             if app.pos < 10:
-                if app.pos < 0:
-                    raise ValueError("negative starting position (undefined behaviour in C)")
                 # Under modern rules, players only receive credit for a game in the field when
                 # they appear there for at least one event, so fielding.g stays 0 here.
-                player.fielding[app.pos] = BoxFielding()
+                # A missing position is -1 (see get_fielding).
+                put_fielding(player, app.pos, BoxFielding())
             if app.pos == 1:
                 pitcher = BoxPitcher(app.player_id, app.name)
                 pitcher.pitching.g = 1
@@ -377,11 +434,11 @@ def add_substitute(box: Boxscore, gi: GameIter) -> None:
                 player.pr_inn = state.inning
 
         entry = _deref(box.slots[sub.slot][sub.team])
-        if sub.pos < 10 and entry.fielding[sub.pos] is None:
+        if sub.pos < 10 and get_fielding(entry, sub.pos) is None:
             # The mere announcement of a player at a position does not award him a game played
             # at the position (under modern rules); the game is set when processing fielding
             # credits for events.
-            entry.fielding[sub.pos] = BoxFielding()
+            put_fielding(entry, sub.pos, BoxFielding())
 
         entry.add_position(sub.pos)
         if sub.pos >= 11 and sub.slot == state.dh_slot[sub.team]:
@@ -1022,16 +1079,12 @@ def process_boxscore_file(box: Boxscore, game: Game) -> None:  # noqa: C901, PLR
                 )
                 log.error(msg)
                 raise ValueError(msg)
-            if not 0 <= pos <= 9 or seq < 1:
-                raise ValueError("dline position/sequence out of range (undefined behaviour in C)")
             if found.num_positions < seq:
                 found.num_positions = seq
-            while seq > len(found.positions):
-                found.positions.append(0)
-            found.positions[seq - 1] = pos
-            if found.fielding[pos] is None:
-                found.fielding[pos] = BoxFielding()
-            f = _deref(found.fielding[pos])
+            set_position_slot(found, seq - 1, pos)
+            if get_fielding(found, pos) is None:
+                put_fielding(found, pos, BoxFielding())
+            f = _deref(get_fielding(found, pos))
             f.g = 1
             f.outs = _item_int(stat, 5)
             f.po = _item_int(stat, 6)
