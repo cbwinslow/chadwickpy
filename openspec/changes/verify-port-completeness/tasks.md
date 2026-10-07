@@ -1,7 +1,7 @@
 ## 1. Inventory
 
-- [ ] 1.1 List every function in the pinned C source for the six tools and their library code (`ctags`), saved as `tests/reference/c_inventory.txt`
-- [ ] 1.2 Write the coverage matrix `docs/about/coverage-matrix.md`: C function -> Python function, or "omitted: reason"; verify no row is blank
+- [x] 1.1 List every function in the pinned C source (`tests/reference/c_inventory.py` -> `docs/about/c-inventory.txt`, 653 functions)
+- [ ] 1.2 Review the 49 functions not found by name (matrix drafted in `docs/about/coverage-matrix.md`; `-d` field lists already identical for five tools); mark each ported-as-X or omitted-with-reason
 - [ ] 1.3 Run the existing suite under `coverage.py` with branch coverage; list Python branches never reached
 
 ## 2. cwevent deep verification
