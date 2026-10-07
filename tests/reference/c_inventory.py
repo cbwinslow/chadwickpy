@@ -19,7 +19,9 @@ SKIP = {"if", "for", "while", "switch", "main"}
 def c_functions(path: Path) -> list[str]:
     text = path.read_text(errors="replace")
     pattern = re.compile(
-        r"^(?:(?:static|extern)\s+)?(?:[A-Za-z_][\w \t\*]*\s+|[A-Za-z_][\w\*]*[ \t]*\n)?\**(\w+)\s*\([^;{}]*\)\s*\{",
+        r"^(?:(?:static|extern)\s+)?"
+        r"(?:[A-Za-z_][\w \t\*]*\s+|[A-Za-z_][\w\*]*[ \t]*\n)?"
+        r"\**(\w+)\s*\([^;{}]*\)\s*\{",
         re.M,
     )
     names = [
