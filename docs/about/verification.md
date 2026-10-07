@@ -27,3 +27,13 @@ To compare against the live C tools, build Chadwick at the pinned commit and set
 Python 3.11, 3.12 and 3.13, and fails if any parity test is skipped.
 
 The season-sweep scripts in `tests/reference/` need the Retrosheet decade archives.
+
+## Any number of cores
+
+The parallel run was checked by restricting the process to 1, 2, 3, 4, 5, 8, 16 and 40 cores
+(`taskset`) on 8 files of the 2023 season with every `cwevent` field: the output is byte-identical to
+the C program every time. Rough timings on a busy host: the C program 2.2 s on one core; chadwickpy
+22.5 s on one core, 12.1 s on two, 6.6 s on four, 3.7 s on sixteen. It never starts more workers than
+there are files, so a few files do not use many cores. Output is also identical when workers are
+started with `fork`, `spawn` or `forkserver`, and with any `-j` value.
+
