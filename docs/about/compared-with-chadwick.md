@@ -11,7 +11,7 @@ description: How chadwickpy compares with the original Chadwick C tools - perfor
 |---|---|---|
 | Install | build from source with a C compiler, or a system package | `pip install chadwickpy` |
 | Needs | compiler, autotools | Python 3.11+ (zero dependencies) |
-| Output | the reference | identical on every season 1910-2025 for all six tools, for inputs where the C has defined behaviour |
+| Output | the reference | identical on every season with game data, 1897-2025, for all six tools, for inputs where the C has defined behaviour |
 | Speed (single file) | `cwevent` on one team-season: ~0.07 s | ~0.66 s (pure Python) |
 | Speed (full season) | `cwevent` 2,430 games: ~2.25 s (1 core) | ~2.34 s (auto-parallelized across cores) |
 | Throughput | ~83,000 plays/s | ~80,000 plays/s |
@@ -73,11 +73,31 @@ so the "matches C" result above is against C on a single core.
 * **Use the C tools** if you process many seasons repeatedly and the speed matters more than
   convenience.
 
+## Using several cores
+
+Output is identical at every core count (checked from 1 to 40 cores, with Python's `fork`, `spawn`
+and `forkserver` worker start methods, and inside a Docker container limited to 2 CPUs). Rough times for
+8 files of the 2023 season on a busy 40-core host:
+
+| Cores | 1 | 2 | 4 | 8 | 16 |
+|---|---|---|---|---|---|
+| `cwevent`, all fields (seconds; C on one core: 2.2) | 22.5 | 12.1 | 6.6 | 6.3 | 3.7 |
+
+It never starts more workers than there are files. See [using several cores](../guides/parallel.md).
+
 ## Where it intentionally differs
 
-* Where the C **crashes or reads uninitialised memory**, `chadwickpy` raises `ValueError` or
-  uses a defined value. `cwbox -S` segfaults in Chadwick 0.10.0, so SportsML output and the
-  `pb` attribute of `cwbox -X` were compared with a patched build.
+* Where the C **crashes or reads memory it should not**, `chadwickpy` stops with a clear error or
+  uses a defined value. Examples: a game with no date, a month of 0 or 13, more than 50 line-score
+  innings, and `cwbox` text on a game that has no plays (all of Retrosheet's box-score-only seasons
+  1901-1907 crash the C `cwbox` text output; `cwbox -X` works in both). The reasons are recorded in
+  the project's [design decisions](../DECISIONS.md).
+* **SportsML output (`cwbox -S`) is deprecated.** Chadwick's own `-S` crashes on nearly every game,
+  so there is nothing to compare it with. The `pb` attribute of `cwbox -X` depends on uninitialised
+  memory in the C and is not compared.
+* `-j` / `--jobs` and the `CHADWICK_JOBS` variable exist only here (the C tools run one process).
+* On Windows, wildcards such as `2010*.EV*` are expanded as Chadwick's Windows build does. Unlike
+  that build, a folder in the pattern is kept (`sub\*.EVA`).
 * The reference is Chadwick's development commit `c685ab5` (it reports version 0.10.0), not
   the 0.10.0 release tag, whose output differs on 2025 files.
 * Inputs that make the C behave in undefined ways are not compared.

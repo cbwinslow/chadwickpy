@@ -1,5 +1,5 @@
 ---
-description: Generate readable text, XML or SportsML box scores from Retrosheet event files with chadwickpy's cwbox command.
+description: Generate readable text or XML box scores from Retrosheet event files with chadwickpy's cwbox command.
 ---
 
 # Box scores (`cwbox`)
@@ -31,7 +31,7 @@ A -- 22436
 |---|---|
 | (none) | plain-text box score |
 | `-X` | XML |
-| `-S` | SportsML |
+| `-S` | SportsML (deprecated: Chadwick's own `-S` crashes on nearly every game, so it cannot be checked) |
 | `-i`, `-s`, `-e`, `-y`, `-q` | same filters as the other tools |
 
 `cwbox` reads the roster files for player names, so run it from the folder that holds `TEAMyyyy` and the `.ROS` files (the current folder, as in Chadwick).

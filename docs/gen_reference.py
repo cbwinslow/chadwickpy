@@ -15,7 +15,7 @@ TOOLS = {
     "cwdaily": ("one row per player per game", True),
     "cwsub": ("one row per substitution", True),
     "cwcomment": ("one row per comment", True),
-    "cwbox": ("box scores (text, XML or SportsML)", False),
+    "cwbox": ("box scores (text or XML; SportsML is deprecated)", False),
 }
 
 

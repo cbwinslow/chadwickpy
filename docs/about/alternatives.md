@@ -18,7 +18,7 @@ project's own page for current details.
 
 ## Where chadwickpy fits
 
-* It reproduces **Chadwick's output**, verified on every season from 1910 to 2025 (see
+* It reproduces **Chadwick's output**, verified on every season with game data, 1897 to 2025 (see
   [how it was verified](verification.md)), without needing the C library.
 * It covers **all six tools**, not just `cwevent`.
 * It is **slower** than the C original.

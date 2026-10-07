@@ -100,6 +100,7 @@ nav:
       - Box scores: guides/box-scores.md
       - Python API: guides/python-api.md
       - Recipes: guides/recipes.md
+      - Using several cores: guides/parallel.md
   - Reference:
       - reference/index.md
       - cwevent: reference/cwevent.md
@@ -114,6 +115,8 @@ nav:
       - Compared with Chadwick: about/compared-with-chadwick.md
       - Other tools: about/alternatives.md
       - How it was verified: about/verification.md
+      - Coverage of Chadwick's code: about/coverage-matrix.md
+      - Design decisions: DECISIONS.md
       - FAQ: about/faq.md
       - Changelog: about/changelog.md
 markdown_extensions:
