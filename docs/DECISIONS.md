@@ -8,7 +8,7 @@ Newest first.
 port raises a clear error (or defines the value) instead of copying the fault. Cases: a game with no
 or unreadable date, a month of 0 or 13, `badj` with no batter, more than 50 line-score innings,
 more than 40 positions or 20 double-play players, `cwbox` text on a game with no plays. The port also
-adds `-j`/`--jobs`/`CHADWICK_JOBS`. **Why.** Matching undefined behaviour would be copying bugs; the
+adds `-j`/`--jobs`/`CHADWICK_JOBS`. Dates shorter than ten characters are the exception: #24 made the port print what the C prints. **Why.** Matching undefined behaviour would be copying bugs; the
 tests record both outputs so any change shows. Real seasons are unaffected (byte-identical).
 **Revisit if:** a user needs the exact C output on such input.
 

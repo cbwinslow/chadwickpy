@@ -224,9 +224,9 @@ def test_case_matches_cwgame(name: str) -> None:
 
 
 def test_known_differences_are_as_recorded() -> None:
-    for name in ("date_short", "date_short_all"):
+    for name in ("date_short", "date_short_all"):  # matched since #24 (reads past the date like C)
         real, port = outcome(*KNOWN[name])
-        assert real is not None and port is None
+        assert real is not None and port == real
     for name in ("dow_month13", "dow_month0"):
         real, port = outcome(*KNOWN[name], wide=True)
         assert real is not None and port is None
