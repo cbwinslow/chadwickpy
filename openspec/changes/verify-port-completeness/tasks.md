@@ -2,7 +2,7 @@
 
 ## Definition of done (chadwickpy is finished when every box is ticked)
 
-- [ ] Every season we have (1908-2025) gives byte-identical output to the C tools for all six tools, run on the fixed code with no coverage tooling (whole-corpus run, task 2.2)
+- [x] Every season with play-by-play files (1908-2025) gives byte-identical output to the C tools for all six tools, run on the fixed code with no coverage tooling (whole-corpus run, task 2.2). Box-score-only years 1871-1907: task 2.2b, open
 - [ ] Every field and option combination of every tool matches the C tools (tasks 2.1, 3.1) - cwevent done, others partly
 - [ ] Every line of the port is either reached by a test that compares with C, or recorded as unreachable with a reason (tasks 1.3, 2.3) - parser, cli, game, box done
 - [x] Every C function is accounted for: ported, or omitted with a reason (task 1.2 and the Windows wildcards, task 4.4)
@@ -27,7 +27,10 @@
   - Fields done 2026-10-07: `tests/test_event_field_sweep.py` (378 tests, 36 s): each of the 97 standard and 67 extended fields requested alone, ASCII and fixed-width, plus 50 random subsets (half with synthesised rosters), on all 10 fixture files (every era and rule variant). All byte-identical to the real cwevent. Mutation check: breaking `FATE_RUNS_CT` makes 4 of them fail, so the sweep does detect a wrong field.
   - Options done 2026-10-07: `tests/test_event_option_sweep.py` (726 tests, 20 s): game selection (`-i` hit/miss, `-s`/`-e` on, before and after the game date, windows, id plus window) x formats (`-a`, `-n`, `-ft` and pairs) x field lists (`-f`, `-x`, both, all) x one or two files, plus `-d` with other options. stdout, stderr and exit status identical to the real cwevent. Malformed option values were already covered by `test_cli_differential` and `test_cli_targeted_differential`.
   - Still to do for 2.1: the field sweep on real seasons across eras instead of fixtures (feeds 2.2).
-- [ ] 2.2 Sweep every available season 1871-2025 and record zero-difference results or findings
+- [x] 2.2 Sweep every available season 1871-2025 and record zero-difference results or findings
+  - Done for every season that has play-by-play files, 1908-2025 (118 seasons; Retrosheet event archives start with 1908), 2026-10-07 on the code after the parallel-warnings fix: 1888 comparisons (16 option sets x 118 seasons: cwevent x4, cwgame x3, cwbox x2 (text and XML), cwdaily x2, cwsub x2, cwcomment x2), 21.9 GB of real-tool output, stdout, stderr and exit status identical. Two comparisons (1928 cwdaily) differed only because a deliberate mutation check was run on the live code during the run; the full 1928 season passed 16 of 16 on rerun, twice. One empty output (2020 June: no games in the shortened season; both tools empty). The first run of this sweep found the parallel duplicate-warnings bug (fixed, see 4.6).
+  - Not done: 1871-1907 exist only as box scores (Retrosheet `*box.zip`), relevant to cwgame and cwbox only. Follow-up 2.2b below.
+- [ ] 2.2b Box-score-only years 1871-1907: download the box-score archives and compare cwgame and cwbox with the C tools
 - [~] 2.3 Add synthetic and fuzzed games targeting unreached branches from 1.3
   - Play parser done 2026-10-07: `tests/test_parse_targeted_differential.py` (hand-built plays vs the C parser, all agree) reaches every previously unreached `parse.py` line except 184 (read past end of play text) and 1103/1105 (final default batted-ball rule, which the C also runs but an earlier rule already fills in). Left as faithful mirrors of the C; to confirm unreachable or reach them.
   - events.py reviewed 2026-10-07: `_c_format` and `_render` were never called anywhere (src, tests, docs), so removed; 230 event/CLI differential tests pass. The cache checks in `future_runs`/`truncated` (77, 82) and the left-justified `%d` formatter (801) cannot be reached because each value is read once per event and no field uses that format; kept as harmless.
