@@ -9,8 +9,8 @@
 - [x] A newer Chadwick cannot change unnoticed (task 4.5)
 - [x] Parallel mode is correct on any machine: start methods, any job count, any number of cores, container CPU limits (task 4.6)
 - [x] Timings recorded per tool and core count (task 4.1); single-core speed decision recorded as ADR-004 (task 4.2)
-- [ ] pytest, ruff, mypy --strict all green in CI; PRs merged; release notes list only what was verified (task 4.3)
-- [ ] Owner approves the release
+- [x] pytest, ruff, mypy --strict all green in CI; PRs merged; release notes list only what was verified (task 4.3: #22-#26 merged; release 0.3.0 lists only the fix and two features)
+- [x] Owner approves the release (2026-10-07: 0.3.0 published; the unpublished 0.2.1 publish was rejected as it still had the duplicate-warnings bug)
 
 ## 1. Inventory
 
@@ -52,7 +52,7 @@
 
 - [x] 4.1 Record single-core and parallel timings with core count for each tool in `docs/about/verification.md` (done 2026-10-07: all six tools at 1 and 8 cores, cwevent from 1 to 40 cores; output identical in every run)
 - [x] 4.2 Record the owner's decision on single-core speed as an ADR (ADR-004, 2026-10-07: acceptable for 1.0)
-- [ ] 4.3 Run `uv run pytest`, ruff and mypy; inspect the diff; open a PR
+- [x] 4.3 Run `uv run pytest`, ruff and mypy; inspect the diff; open a PR (CI green on #26; chadwickpy 0.3.0 installed from PyPI into a clean environment gives output identical to the C tools for all six tools, stdout and stderr)
 - [x] 4.4 Port or explicitly omit Windows wildcard expansion (`cwtools_process_filespec`), test first
   - Ported 2026-10-07: `expand_filespec` in cli.py; on Windows `*` and `?` are expanded (matches in name order; a pattern or name matching nothing is skipped silently, as in the C); on Unix names pass through unchanged. 13 tests in `tests/test_filespec.py` (written first, failed, then passed) run the Windows behaviour on Linux with the platform check switched on, and check that a wildcard run equals naming the files for all six tools. Deliberate difference from the C: it keeps only the bare file name from `_findfirst`, so `sub\\*.EVA` would look for the files in the current directory; the port keeps the directory. Not testable against the real C here (needs a Windows build).
 - [x] 4.5 Add an upstream-drift test: inventory a newer Chadwick and fail on C functions with no Python counterpart
@@ -65,3 +65,7 @@
   - Final coverage run 2026-10-07 (whole suite, 4866 tests, worker processes included): 97.28% (5592 statements, 109 missed; 2382 branches, 98 partly taken), up from 96%. Remaining misses: cwboxsml.py (deprecated SportsML, ADR-002: out of scope), lines already shown unreachable (see 2.3), and a final batch handed out for triage (book.py, lint.py, gameiter.py, daily.py, xmlwrite.py, guard.py, comment.py and others). Ten of my new subprocess tests failed only when run under the coverage tooling (it adds text to child stderr); fixed by removing COVERAGE_* from the child environment.
   - FINAL 2026-10-07 (three more subagents, results re-run and merged by me: `test_final_group_a_*` 56 tests, `test_final_group_b_*` 125, `test_final_group_c_box` 26; one new C harness `tests/reference/final_a_dump.c`): measured coverage of the whole suite is **99.06%** (5592 statements, 37 missed; 2382 branches, 36 partly taken). Of the 37: 26 are `cwboxsml.py` (SportsML, deprecated, ADR-002). The other 11 are unreachable, each with a reason: daily.py 50 (a game without a date is rejected earlier), daily.py 211-212 (pitch and strike counts are never set to -1), parse.py 184 (read past the end of the play text: C undefined), parse.py 1103 and 1105 (the generic-out default is already set before this rule, as in the C), cwgame.py 45 and 165 (date checked earlier), events.py 801 (no field uses a left-justified %d), cwboxxml.py 179 (event player list always has 20 entries), game.py 286 (a read returning nothing without end of file). Also not reachable through an event file, covered by direct calls: cwbox.py 97, 122, 295, 379, 385.
   - New finding (group B): cwevent on a pickoff-caught-stealing play with a base character other than 1-3, H or 4 (`POCS0(2)`, `POCS5(2)`, `POCS8(2)`, `POCS?(2)`) makes the C write outside its `po_flag` array into neighbouring printed fields, so the C prints different values in fields 71, 46, 143, 51 or 93; the port ignores the write. C undefined behaviour, recorded under ADR-003; `POCS6`, `POCS7`, `POCS9` match the C exactly.
+
+## Release record
+
+- 2026-10-07: chadwickpy **0.3.0** published to PyPI (release PR #27). Contains: fix (parallel workers printed every warning twice under `fork`), feature (worker count honours container CPU limits), feature (Windows wildcard expansion). The tests, docs and decisions of this change (ADR-002 to ADR-004) are in the repository. Checked after publishing: `pip install chadwickpy==0.3.0` in a clean environment; cwevent, cwgame, cwdaily, cwsub, cwcomment and cwbox output and warnings byte-identical to the C tools.
