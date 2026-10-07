@@ -8,7 +8,7 @@
 - [x] Every C function is accounted for: ported, or omitted with a reason (task 1.2 and the Windows wildcards, task 4.4)
 - [x] A newer Chadwick cannot change unnoticed (task 4.5)
 - [x] Parallel mode is correct on any machine: start methods, any job count, any number of cores, container CPU limits (task 4.6)
-- [~] Timings recorded per tool and core count (cwevent done; other tools open, task 4.1); single-core speed decision recorded as ADR-004 (task 4.2, done)
+- [x] Timings recorded per tool and core count (task 4.1); single-core speed decision recorded as ADR-004 (task 4.2)
 - [ ] pytest, ruff, mypy --strict all green in CI; PRs merged; release notes list only what was verified (task 4.3)
 - [ ] Owner approves the release
 
@@ -50,7 +50,7 @@
 
 ## 4. Performance and wrap-up
 
-- [~] 4.1 Record single-core and parallel timings with core count for each tool in `docs/about/verification.md` (cwevent measured, see 4.6; other tools to do)
+- [x] 4.1 Record single-core and parallel timings with core count for each tool in `docs/about/verification.md` (done 2026-10-07: all six tools at 1 and 8 cores, cwevent from 1 to 40 cores; output identical in every run)
 - [x] 4.2 Record the owner's decision on single-core speed as an ADR (ADR-004, 2026-10-07: acceptable for 1.0)
 - [ ] 4.3 Run `uv run pytest`, ruff and mypy; inspect the diff; open a PR
 - [x] 4.4 Port or explicitly omit Windows wildcard expansion (`cwtools_process_filespec`), test first
