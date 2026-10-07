@@ -1,5 +1,17 @@
 # Tasks: verify-port-completeness
 
+## Definition of done (chadwickpy is finished when every box is ticked)
+
+- [ ] Every season we have (1908-2025) gives byte-identical output to the C tools for all six tools, run on the fixed code with no coverage tooling (whole-corpus run, task 2.2)
+- [ ] Every field and option combination of every tool matches the C tools (tasks 2.1, 3.1) - cwevent done, others partly
+- [ ] Every line of the port is either reached by a test that compares with C, or recorded as unreachable with a reason (tasks 1.3, 2.3) - parser, cli, game, box done
+- [ ] Every C function is accounted for: ported, or omitted with a reason (task 1.2 done; Windows wildcards, task 4.4, open)
+- [ ] A newer Chadwick cannot change unnoticed (task 4.5 done)
+- [ ] Parallel mode is correct on any machine: start methods, any job count, any number of cores, container CPU limits decided (task 4.6)
+- [ ] Timings recorded per tool and core count, and the single-core speed decision recorded as an ADR (tasks 4.1, 4.2)
+- [ ] pytest, ruff, mypy --strict all green in CI; PRs merged; release notes list only what was verified (task 4.3)
+- [ ] Owner approves the release
+
 ## 1. Inventory
 
 - [x] 1.1 List every function in the pinned C source (`tests/reference/c_inventory.py` -> `docs/about/c-inventory.txt`, 653 functions)
