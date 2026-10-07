@@ -32,6 +32,8 @@ The 49 are mostly numbered output fields that the port builds in a loop instead 
 matches the C tools exactly. One was reviewed by hand: `cw_pitch_strike_inplay` is ported as the
 constant `PITCH_STRIKE_INPLAY` in `game.py`, same behaviour.
 
-**Not yet done:** a function-by-function review of the other 48, and branch coverage of the port
+**Reviewed:** all 49 (see `openspec/changes/verify-port-completeness/assessment.md`): 48 ported in another form, 1 platform gap (Windows wildcard expansion).
+
+**Not yet done:** branch coverage of the port
 over the full corpus (task 1.3 of `verify-port-completeness`). Until then, "complete" means
 "the output field lists match and every season tested matches", not "every branch is proven".
