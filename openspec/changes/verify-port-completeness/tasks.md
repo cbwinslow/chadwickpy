@@ -27,7 +27,8 @@
 
 - [~] 3.1 Repeat 2.1-2.3 for cwgame, then cwbox, then cwdaily, cwsub, cwcomment
   - Fields done 2026-10-07: `tests/test_field_sweep_other_tools.py` (822 tests, 3 min): cwgame (85 standard + 97 extended), cwdaily (154), cwsub (25), cwcomment (10) fields each alone, ASCII with header and fixed-width, plus 10 random subsets per tool, on all 10 fixtures; stdout, stderr and exit status identical to the real tools. Mutation check: breaking one cwdaily helper fails 258 tests.
-  - Still to do for 3.1: option combinations (as `test_event_option_sweep` for cwevent) for the four tools; cwbox (text and XML) option and content sweeps.
+  - Options done 2026-10-07: `tests/test_option_sweep_other_tools.py` (1728 tests, 69 s: cwgame, cwdaily, cwsub, cwcomment x game selection x formats x field lists x one or two files) and `tests/test_cwbox_option_sweep.py` (96 tests: selection x text/XML x -q x files; XML `pb` attribute removed on both sides, SportsML excluded per ADR-002). All identical to the real tools in stdout, stderr and exit status.
+  - Still to do for 3.1: cwbox content on real seasons (the whole-corpus run covers it), then synthetic games for the remaining unreached lines (done in 2.3 by the targeted tests).
 
 ## 4. Performance and wrap-up
 
