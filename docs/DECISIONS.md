@@ -2,6 +2,20 @@
 
 Newest first.
 
+## ADR-004: Speed is acceptable for 1.0; workers follow container CPU limits
+
+**Decision (2026-10-07, owner).** (1) The port ships at its current speed: about 10 times slower
+than the C program on one core, and within about 1.7 times of the one-core C program with 16
+cores (measured on `cwevent`, 8 files of 2023, busy 40-core host). Output is identical at every core
+count, so speed is not a correctness question. A faster build (for example Rust) is a later,
+separate decision if users ask for it. (2) The automatic worker count honours a Linux container or
+service CPU quota (Docker `--cpus`, Kubernetes limits, systemd `CPUQuota=`; cgroup versions 1 and
+2) as well as CPU affinity, so a process limited to 2 CPUs on a 64-core host starts 2 workers, not
+63. **Why.** Correct, reproducible output is the product; an unbounded worker count only wastes
+memory. Checked in real containers: `--cpus=2` gives 2 workers, `--cpus=0.5` gives 1, no limit
+gives 39 on a 40-core host; output identical on Python 3.12 (`fork`) and 3.14 (`forkserver`).
+**Revisit if:** users report the speed as a blocker, or a quota type is found that is not read.
+
 ## ADR-003: Where the port differs from C on purpose
 
 **Decision (2026-10-07).** When the C tool crashes or reads past an array on malformed input, the

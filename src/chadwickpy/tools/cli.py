@@ -381,15 +381,70 @@ def _process_files_parallel(
     return overall_status
 
 
+def _quota_cpus(quota: str, period: str) -> int | None:
+    """CPUs allowed by a CFS quota/period pair (rounded up, at least one), or ``None``."""
+    try:
+        q, p = int(quota), int(period)
+    except ValueError:
+        return None
+    if q <= 0 or p <= 0:
+        return None  # "max", -1, 0 and other nonsense: no usable limit
+    return max(1, -(-q // p))
+
+
+def cgroup_cpu_limit(
+    root: Path = Path("/sys/fs/cgroup"), self_cgroup: Path = Path("/proc/self/cgroup")
+) -> int | None:
+    """The CPU limit (whole CPUs, rounded up) a Linux container or service puts on this process.
+
+    Docker ``--cpus``, Kubernetes limits and systemd ``CPUQuota=`` are CFS quotas in the control-
+    group files, which neither CPU affinity nor ``os.process_cpu_count`` reflects. Both layouts are
+    read (version 2 ``cpu.max``; version 1 ``cpu.cfs_quota_us`` / ``cpu.cfs_period_us``), for the
+    process's own group and every parent group up to the root; the tightest limit wins. ``None``
+    when there is no limit or the files cannot be read.
+    """
+    try:
+        lines = self_cgroup.read_text().splitlines()
+    except OSError:
+        return None
+    limits: list[int] = []
+    for line in lines:
+        parts = line.split(":", 2)
+        if len(parts) != 3:
+            continue
+        _, controllers, path = parts
+        if controllers and "cpu" not in controllers.split(","):
+            continue
+        group = Path(path.lstrip("/"))
+        for directory in [group, *group.parents]:
+            for base in (root, root / "cpu,cpuacct", root / "cpu"):
+                try:
+                    if controllers == "":  # version 2
+                        quota, period = (base / directory / "cpu.max").read_text().split()[:2]
+                    else:  # version 1
+                        quota = (base / directory / "cpu.cfs_quota_us").read_text().strip()
+                        period = (base / directory / "cpu.cfs_period_us").read_text().strip()
+                except (OSError, ValueError):
+                    continue
+                limit = _quota_cpus(quota, period)
+                if limit is not None:
+                    limits.append(limit)
+    return min(limits) if limits else None
+
+
 def available_cpus() -> int:
-    """CPUs this process may actually use (honours CPU affinity where Python can see it)."""
+    """CPUs this process may actually use: CPU affinity (``taskset``, cpusets) and any container
+    CPU quota, whichever is tighter."""
     process_cpu_count = getattr(os, "process_cpu_count", None)  # Python 3.13+
     if process_cpu_count is not None:
-        return process_cpu_count() or 1
-    try:
-        return len(os.sched_getaffinity(0)) or 1  # Linux: honours taskset and cpusets
-    except AttributeError:  # macOS, Windows
-        return os.cpu_count() or 1
+        usable = process_cpu_count() or 1
+    else:
+        try:
+            usable = len(os.sched_getaffinity(0)) or 1  # Linux: honours taskset and cpusets
+        except AttributeError:  # macOS, Windows
+            usable = os.cpu_count() or 1
+    limit = cgroup_cpu_limit()
+    return min(usable, limit) if limit is not None else usable
 
 
 def _is_windows() -> bool:

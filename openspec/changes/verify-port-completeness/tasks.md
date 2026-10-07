@@ -7,8 +7,8 @@
 - [ ] Every line of the port is either reached by a test that compares with C, or recorded as unreachable with a reason (tasks 1.3, 2.3) - parser, cli, game, box done
 - [x] Every C function is accounted for: ported, or omitted with a reason (task 1.2 and the Windows wildcards, task 4.4)
 - [ ] A newer Chadwick cannot change unnoticed (task 4.5 done)
-- [ ] Parallel mode is correct on any machine: start methods, any job count, any number of cores, container CPU limits decided (task 4.6)
-- [ ] Timings recorded per tool and core count, and the single-core speed decision recorded as an ADR (tasks 4.1, 4.2)
+- [x] Parallel mode is correct on any machine: start methods, any job count, any number of cores, container CPU limits (task 4.6)
+- [~] Timings recorded per tool and core count (cwevent done; other tools open, task 4.1); single-core speed decision recorded as ADR-004 (task 4.2, done)
 - [ ] pytest, ruff, mypy --strict all green in CI; PRs merged; release notes list only what was verified (task 4.3)
 - [ ] Owner approves the release
 
@@ -49,14 +49,14 @@
 ## 4. Performance and wrap-up
 
 - [~] 4.1 Record single-core and parallel timings with core count for each tool in `docs/about/verification.md` (cwevent measured, see 4.6; other tools to do)
-- [ ] 4.2 Record the owner's decision on single-core speed as an ADR
+- [x] 4.2 Record the owner's decision on single-core speed as an ADR (ADR-004, 2026-10-07: acceptable for 1.0)
 - [ ] 4.3 Run `uv run pytest`, ruff and mypy; inspect the diff; open a PR
 - [x] 4.4 Port or explicitly omit Windows wildcard expansion (`cwtools_process_filespec`), test first
   - Ported 2026-10-07: `expand_filespec` in cli.py; on Windows `*` and `?` are expanded (matches in name order; a pattern or name matching nothing is skipped silently, as in the C); on Unix names pass through unchanged. 13 tests in `tests/test_filespec.py` (written first, failed, then passed) run the Windows behaviour on Linux with the platform check switched on, and check that a wildcard run equals naming the files for all six tools. Deliberate difference from the C: it keeps only the bare file name from `_findfirst`, so `sub\\*.EVA` would look for the files in the current directory; the port keeps the directory. Not testable against the real C here (needs a Windows build).
 - [x] 4.5 Add an upstream-drift test: inventory a newer Chadwick and fail on C functions with no Python counterpart
   - Done 2026-10-07, redesigned: the name lookup is too loose to detect drift (it counted a brand-new function as ported because its last word, `function`, appears in a docstring; 191 of the 603 name matches rest on generic words such as `help` or `cleanup`). Instead `tests/test_upstream_drift.py` compares a fingerprint of every C function (`docs/about/c-function-hashes.txt`, 653 functions, made by `python tests/reference/c_inventory.py --hashes CHECKOUT`) and names every function added, removed or changed. Checked against a doctored copy of the C source: one added, one renamed (added + removed) and one modified function are each reported. `.github/workflows/upstream-drift.yml` runs the whole suite weekly against the newest Chadwick.
-- [~] 4.6 Parallel robustness on any machine (owner request 2026-10-07)
+- [x] 4.6 Parallel robustness on any machine (owner request 2026-10-07)
   - Done: `tests/test_parallel_start_methods.py` (7 tests): output identical to `-j 1` under `fork`, `spawn` and `forkserver` start methods and with `-j` 2, 5, 64, 100000 (capped at the file count). Existing: worker-count logic and affinity (`test_worker_count.py`), dead-worker fallback (`test_cli_parallel.py`).
   - Done 2026-10-07: `cwevent` on 8 files of 2023 (all fields) restricted with `taskset` to 1, 2, 3, 4, 5, 8, 16 and 40 cores of a busy 40-core host: output byte-identical to the real cwevent every time; C 2.2 s on one core; port 22.5 s (1), 12.1 (2), 9.5 (3), 6.6 (4), 6.6 (5), 6.3 (8), 3.7 (16), 3.9 (40). No gain past 8 cores because a run never starts more workers than files (8 here); timings are noisy (other jobs on the host). Single core is about 10x slower than C; parallel with 16 cores is about 1.7x slower than the one-core C. Still open: decide whether auto mode should also honour a cgroup CPU quota (Docker `--cpus`, Kubernetes limits): `os.sched_getaffinity` and `process_cpu_count` do not see quotas, so on a 64-core host limited to 2 CPUs auto mode would start ~63 workers (slow and memory hungry, not wrong). Cannot be tested on this host (no `cpu.max`).
   - BUG FOUND AND FIXED 2026-10-07 (whole-corpus run, 1908 `cwbox`): on Linux (`fork`), parallel workers inherited the parent's stderr log handler, so every warning (e.g. "Sanity check fails for game ...") printed twice, the first copy early and out of order. stdout was never affected; `-j 1`, `spawn` and `forkserver` were correct. The C prints each once. Test first: `test_warnings_are_printed_once_and_in_order` (fails under fork before the fix, passes after); fix in `_worker_scorebook` (cli.py). The earlier start-method tests missed it because their data produced no warnings and the driver captured output instead of using the real stderr. This bug was present in the published 0.2.0 and 0.2.1.
-
+  - Container CPU limits done 2026-10-07 (owner: yes): `cgroup_cpu_limit` reads cgroup v1 and v2 quotas for the process's group and its parents (tightest wins) and `available_cpus` takes the lower of that and CPU affinity. 21 tests in `tests/test_cgroup_limit.py` (written first, failed, then passed). Real Docker check: `--cpus=2` -> 2 workers (was 39), `--cpus=0.5` -> 1, none -> 39; a parallel `cwevent` run in the 2-CPU Python 3.14 container (`forkserver`) is byte-identical to Python 3.12 on the host and to the real C program. Decision in ADR-004.
