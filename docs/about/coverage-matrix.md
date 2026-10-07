@@ -38,3 +38,7 @@ constant `PITCH_STRIKE_INPLAY` in `game.py`, same behaviour.
 **Not yet done:** branch coverage of the port
 over the full corpus (task 1.3 of `verify-port-completeness`). Until then, "complete" means
 "the output field lists match and every season tested matches", not "every branch is proven".
+
+## Keeping the matrix honest
+
+The name lookup above is a lead, not evidence (see the note on `ok`). Drift in the C sources is detected by a different, exact method: `tests/test_upstream_drift.py` compares a fingerprint of every C function with `c-function-hashes.txt`, and a weekly workflow runs the whole suite against the newest Chadwick.
