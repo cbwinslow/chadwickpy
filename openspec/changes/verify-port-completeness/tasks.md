@@ -13,7 +13,8 @@
 
 - [~] 2.1 Test every `-f`/`-x` field and option combination against the C tool on a mixed-era sample, tests first
   - Fields done 2026-10-07: `tests/test_event_field_sweep.py` (378 tests, 36 s): each of the 97 standard and 67 extended fields requested alone, ASCII and fixed-width, plus 50 random subsets (half with synthesised rosters), on all 10 fixture files (every era and rule variant). All byte-identical to the real cwevent. Mutation check: breaking `FATE_RUNS_CT` makes 4 of them fail, so the sweep does detect a wrong field.
-  - Still to do: other option combinations (dates -s/-e, -q, -d, roster and team options together with fields), then real seasons across eras instead of fixtures.
+  - Options done 2026-10-07: `tests/test_event_option_sweep.py` (726 tests, 20 s): game selection (`-i` hit/miss, `-s`/`-e` on, before and after the game date, windows, id plus window) x formats (`-a`, `-n`, `-ft` and pairs) x field lists (`-f`, `-x`, both, all) x one or two files, plus `-d` with other options. stdout, stderr and exit status identical to the real cwevent. Malformed option values were already covered by `test_cli_differential` and `test_cli_targeted_differential`.
+  - Still to do for 2.1: the field sweep on real seasons across eras instead of fixtures (feeds 2.2).
 - [ ] 2.2 Sweep every available season 1871-2025 and record zero-difference results or findings
 - [~] 2.3 Add synthetic and fuzzed games targeting unreached branches from 1.3
   - Play parser done 2026-10-07: `tests/test_parse_targeted_differential.py` (hand-built plays vs the C parser, all agree) reaches every previously unreached `parse.py` line except 184 (read past end of play text) and 1103/1105 (final default batted-ball rule, which the C also runs but an earlier rule already fills in). Left as faithful mirrors of the C; to confirm unreachable or reach them.
