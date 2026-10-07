@@ -50,7 +50,8 @@ def run(tmp_path: Path, method: str, jobs: str, files: list[str], tool: str = "c
     return subprocess.run(
         [sys.executable, "driver.py", method, jobs, *files],
         cwd=tmp_path,
-        env={**os.environ, "TOOL": tool},
+        # a coverage run (COVERAGE_PROCESS_START) adds its own text to the children's stderr
+        env={**{k: v for k, v in os.environ.items() if not k.startswith("COVERAGE")}, "TOOL": tool},
         capture_output=True,
         timeout=300,
         check=False,
