@@ -21,7 +21,7 @@ gives 39 on a 40-core host; output identical on Python 3.12 (`fork`) and 3.14 (`
 **Decision (2026-10-07).** When the C tool crashes or reads past an array on malformed input, the
 port raises a clear error (or defines the value) instead of copying the fault. Cases: a game with no
 or unreadable date, a month of 0 or 13, `badj` with no batter, more than 50 line-score innings,
-more than 40 positions or 20 double-play players, `cwbox` text on a game with no plays (this is what the real cwbox does on the box-score-only seasons 1901-1907: it crashes, and the port reports an error; `cwbox -X` works in both). The port also
+more than 40 positions or 20 double-play players, a pickoff-caught-stealing play naming a base other than 1-3, H or 4 (the C writes outside its array and corrupts neighbouring output fields; the port ignores the write), `cwbox` text on a game with no plays (this is what the real cwbox does on the box-score-only seasons 1901-1907: it crashes, and the port reports an error; `cwbox -X` works in both). The port also
 adds `-j`/`--jobs`/`CHADWICK_JOBS`. Dates shorter than ten characters are the exception: #24 made the port print what the C prints. **Why.** Matching undefined behaviour would be copying bugs; the
 tests record both outputs so any change shows. Real seasons are unaffected (byte-identical).
 **Revisit if:** a user needs the exact C output on such input.
