@@ -1,0 +1,45 @@
+schema: spec-driven
+
+context: |
+  Read openspec/project.md first (constitution) and AGENTS.md. chadwickpy is a
+  faithful Python translation of the Chadwick C tools (cwevent, cwgame, cwbox,
+  cwdaily, cwsub, cwcomment). Reference: C source at the pinned commit; output
+  must match the real tools byte for byte. Standard library only at runtime.
+
+rules:
+  design:
+    - Record hard-to-reverse, surprising decisions as an ADR in docs/DECISIONS.md and cite the number.
+  tasks:
+    - Write the failing differential/parity test before the fix.
+    - Name the Chadwick C function being ported or changed.
+
+# Project context (optional)
+# This is shown to AI when creating artifacts.
+# Add your tech stack, conventions, style guides, domain knowledge, etc.
+# Example:
+#   context: |
+#     Tech stack: TypeScript, React, Node.js
+#     We use conventional commits
+#     Domain: e-commerce platform
+
+# Per-artifact rules (optional)
+# Add custom rules for specific artifacts.
+# Example:
+#   rules:
+#     proposal:
+#       - Keep proposals under 500 words
+#       - Always include a "Non-goals" section
+#     tasks:
+#       - Break tasks into chunks of max 2 hours
+
+# Per-operation guidance (optional)
+# Add advisory guidance for how apply and archive work should be conducted.
+# This is separate from artifact rules above.
+# Example:
+#   operations:
+#     apply:
+#       guidance:
+#         - Keep test summaries concise
+#     archive:
+#       guidance:
+#         - Summarize the archive outcome before finishing
