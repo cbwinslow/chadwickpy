@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.2.1](https://github.com/cbwinslow/chadwickpy/compare/v0.2.0...v0.2.1) (2026-10-07)
+
+
+### Bug Fixes
+
+* a dead worker no longer makes the parallel run print files twice ([#18](https://github.com/cbwinslow/chadwickpy/issues/18)) ([212b445](https://github.com/cbwinslow/chadwickpy/commit/212b445d4215c046dbc12639e789e2df1f057ecf))
+* audit findings - differences from the C tools on defined behaviour (stacked on [#23](https://github.com/cbwinslow/chadwickpy/issues/23)) ([#24](https://github.com/cbwinslow/chadwickpy/issues/24)) ([e9a2531](https://github.com/cbwinslow/chadwickpy/commit/e9a25311879619da77814c521d56974ff15f96cd))
+* automatic worker count follows the CPUs the process may use (not all installed CPUs) ([#19](https://github.com/cbwinslow/chadwickpy/issues/19)) ([6a7015f](https://github.com/cbwinslow/chadwickpy/commit/6a7015f260d9e88ae6c08ecc85f66a5f5dcd6707))
+* reproduce what the C does with damaged box-score records ([#23](https://github.com/cbwinslow/chadwickpy/issues/23)) ([e0fa81d](https://github.com/cbwinslow/chadwickpy/commit/e0fa81dbbe4c0bbf7e39b4592f23b74bc8dc63d0))
+* restore parity with Chadwick on end-of-file and odd input (0.2.0 regressions) ([#17](https://github.com/cbwinslow/chadwickpy/issues/17)) ([062f94f](https://github.com/cbwinslow/chadwickpy/commit/062f94f76e480df9943322174080a875b5b3e773))
+
 ## [0.2.0](https://github.com/cbwinslow/chadwickpy/compare/v0.1.1...v0.2.0) (2026-10-05)
 
 
