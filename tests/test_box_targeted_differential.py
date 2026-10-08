@@ -266,7 +266,8 @@ def test_box_undefined_behaviour_in_chadwick(harness, sanitized, tmp_path, name)
 # ---------------------------------------------------------------------------------------------
 
 CLI_SAME = {
-    # info,daynight,g_day prints " (D)" (the C compares with "g_day", not "day")
+    # info,daynight,day prints " (D)" (0.11.0, d4df919; 0.10 compared with "g_day" by mistake, so
+    # "g_day" now prints no marker)
     "daynight_g_day": game(info={"daynight": "g_day"}),
     "daynight_day": game(info={"daynight": "day"}),
     "date_trailing_text": game(info={"date": "2020/01/01x"}),
