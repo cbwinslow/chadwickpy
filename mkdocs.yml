@@ -72,7 +72,7 @@ plugins:
       markdown_description: >-
         chadwickpy is a pure-Python port of the Chadwick baseball tools (cwevent, cwgame,
         cwdaily, cwsub, cwcomment, cwbox). It converts Retrosheet play-by-play event files into
-        CSV tables. Install with pip install chadwickpy. Output matches the C tools on every season 1910-2025, for inputs where the C behaves in a defined way.
+        CSV tables. Install with pip install chadwickpy. It follows the official Chadwick 0.11.0 exactly (including the -Q quiet switch and -D directory option) and its output matches the C tools byte for byte on every Retrosheet season with game data, 1897-2025, for inputs where the C behaves in a defined way. It uses several CPU cores by itself (-j or CHADWICK_JOBS to control).
       sections:
         Start here:
           - index.md: what chadwickpy is and a one-minute example
@@ -84,12 +84,16 @@ plugins:
           - guides/box-scores.md: cwbox
           - guides/python-api.md: use it from Python
           - guides/recipes.md: worked examples
+          - guides/parallel.md: using several cores, -j, CHADWICK_JOBS, containers
         About:
           - about/who-is-it-for.md: who it suits and when to use something else
           - about/compared-with-chadwick.md: differences, speed, licence
           - about/alternatives.md: other ways to work with Retrosheet data
-          - about/verification.md: how output was verified
+          - about/verification.md: how output was verified (seasons, fields, options, coverage)
+          - about/coverage-matrix.md: which of Chadwick's C functions are ported
           - about/faq.md: frequently asked questions
+          - about/changelog.md: release history
+          - DECISIONS.md: design decisions (ADRs)
 nav:
   - Home: index.md
   - Getting started: getting-started.md
