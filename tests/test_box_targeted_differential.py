@@ -288,8 +288,6 @@ CLI_SAME = {
 CLI_FAIL = {
     # no date: the C reads NULL; an unparsable date aborts it
     "no_date": game().replace("info,date,2020/01/01\n", ""),
-    "date_dashes": game(info={"date": "2020-01-01"}),
-    "date_unreadable": game(info={"date": "abc"}),
     "no_number_text": game().replace("info,number,0\n", ""),
 }
 
@@ -346,11 +344,24 @@ def test_cwbox_failure(tmp_path, name, args):
 
 
 @pytest.mark.parametrize("name", CLI_UB)
-def test_cwbox_uninitialised_value(tmp_path, name):
-    """The C succeeds with a value taken from an uninitialised variable; the port refuses the
-    input rather than guess it."""
+def test_cwbox_uninitialised_value(name):
+    """The C takes a value from an uninitialised variable, so what it does depends on the machine
+    (output on one, a crash on another); the port refuses the input rather than guess it
+    (ADR-003). Only the port is asserted: asserting the C's outcome made this test flaky."""
     data = CLI_UB[name].encode("latin-1")
-    c = c_run(data, [], tmp_path)
-    assert c is not None
-    assert c[0] == 0
     assert port_run(data, []) is None
+
+
+# A date that sscanf cannot read leaves the C with an uninitialised date: the real cwbox crashes on
+# some machines and prints output on others (CI saw both), so only the port is asserted.
+UNREADABLE_DATE = {
+    "date_dashes": game(info={"date": "2020-01-01"}),
+    "date_unreadable": game(info={"date": "abc"}),
+}
+
+
+@pytest.mark.parametrize("args", [[], ["-X"]], ids=["text", "xml"])
+@pytest.mark.parametrize("name", UNREADABLE_DATE)
+def test_cwbox_unreadable_date_is_refused(name, args):
+    data = UNREADABLE_DATE[name].encode("latin-1")
+    assert port_run(data, args) is None
