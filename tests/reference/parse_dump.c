@@ -21,7 +21,7 @@ int main(void){
       CWEventData e; memset(&e,0xAA,sizeof e);
       int ok=cw_parse_event(text,&e);
       n=0; P("ok=%d|type=%d|",ok,e.event_type);
-      ints("adv",e.advance,4); ints("rbi",e.rbi_flag,4); ints("fc",e.fc_flag,4); ints("muff",e.muff_flag,4);
+      ints("adv",e.advance,4); ints("rbi",e.rbi_flag,4); ints("fc",e.fc_flag,4); ints("pout",e.primary_out_flag,4); ints("muff",e.muff_flag,4);
       for(int i=0;i<4;i++){P("play%d=",i); str(e.play[i]); P("|");}
       P("sh=%d|sf=%d|dp=%d|gdp=%d|tp=%d|wp=%d|pb=%d|foul=%d|bunt=%d|force=%d|",e.sh_flag,e.sf_flag,e.dp_flag,e.gdp_flag,e.tp_flag,e.wp_flag,e.pb_flag,e.foul_flag,e.bunt_flag,e.force_flag);
       ints("sb",e.sb_flag+1,3); ints("cs",e.cs_flag+1,3); ints("po",e.po_flag+1,3);

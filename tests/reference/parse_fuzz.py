@@ -36,6 +36,7 @@ def dump(text):
         + ints("adv", e.advance[:4])
         + ints("rbi", e.rbi_flag[:4])
         + ints("fc", e.fc_flag[:4])
+        + ints("pout", e.primary_out_flag[:4])
         + ints("muff", e.muff_flag[:4])
     )
     for i in range(4):
