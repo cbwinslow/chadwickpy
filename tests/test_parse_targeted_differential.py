@@ -140,6 +140,97 @@ BATTED = [
     "8/G",
     "8/F",
 ]
+# Chadwick 0.11.0: C/ takes its fielding credit as the first flag only (2abbe0c)
+CATCHER_INTERFERENCE = [
+    "C/E2",
+    "C/E1",
+    "C/E3/G",
+    "C/4E1",
+    "C/46E1",
+    "C/E2/L8",
+    "C/F8/E2",
+    "C/INT",
+    "C",
+    "C/G/E2",
+    "C/E0",
+    "C/E2.1-2",
+]
+# '#', '!' and '?' are stripped before parsing (b7f8b62, d55c9df); '?' is no fielder
+STRIPPED = [
+    "8!",
+    "6#3/G",
+    "S8?",
+    "?3",
+    "64?3",
+    "E?4",
+    "E4?",
+    "FC?",
+    "FC5?/G",
+    "K+SB2#.1-2",
+    "8/F#",
+    "S/8#.2-H!",
+]
+# SB inside an advance modifier (8b706d0)
+SB_IN_ADVANCE = [
+    "BK.1-2(SB2)",
+    "BK.2-3(SB3);1-2(SB2)",
+    "BK.3-H(SBH)",
+    "BK.3-H(SB4)",
+    "BK.1-2(SB)",
+    "BK.B-1(SB2)",
+    "BK.1-2(SB5)",
+]
+# pickoffs and stolen bases after a CS or SB (be452bc)
+CS_THEN_PICKOFF = [
+    "CS2(24);PO1(13)",
+    "CS2(24);POCS3(1361)",
+    "CS2(24);POSB2",
+    "SB2;PO1(13)",
+    "SB2;POCS3(1361)",
+    "SB3;POSB2",
+    "CS3(25);POCSH(2346)",
+]
+# /TH and /THn on OA (c3e1e75)
+OA_THROW = [f"OA/{m}" for m in ("TH", "TH1", "TH2", "TH3", "THH", "TH4", "THX")]
+# placeholder 99 credits are rolled back and not inferred from (6a783ac)
+NINETY_NINE = ["99", "99(1)", "99/G", "99(B)99(1)", "9(1)99", "64(1)99", "99/F8", "S99", "99/SH"]
+# inferred versus explicit batted ball types (0a706f6)
+INFERRED = [
+    "E5/SF",
+    "E4/SF",
+    "8/SF",
+    "5/IF",
+    "5/IF/G",
+    "5/G/IF",
+    "FC5",
+    "FC5/F",
+    "E6",
+    "E9/G",
+    "54(1)/FO",
+    "8/FO",
+    "54(1)3/DP",
+    "64(1)3/DP/G",
+    "6(1)/FO/L",
+    "S5/SF",
+]
+# explicit-credit strikeouts and out-based force flags (3f77b98, 14fae82)
+STRIKEOUT_ADVANCE = [
+    "K+WP.BX3(E2/TH)(2)",
+    "K+WP.BX1(2E3)",
+    "K+WP.B-1(2)",
+    "K.BX1(23)",
+    "K.BX1(2E3)(3)",
+    "K+PB.B-1(E2)(2)",
+    "K23",
+    "K23+WP.B-1",
+    "64(1)3/DP/RINT",
+    "64(1)3/DP",
+    "46(1)3/DP/FO",
+    "6(1)4(2)/DP",
+    "54(2)/FO/DP",
+]
+# /SAC is no longer a sacrifice-hit flag (0381790)
+SAC = ["1/SAC", "54/SAC", "5/SH", "1/SH/SAC", "1/B/SAC"]
 
 
 @pytest.fixture(scope="module")
@@ -166,6 +257,15 @@ GROUPS = {
     "nested": NESTED,
     "pickoff": PICKOFF,
     "batted": BATTED,
+    "catcher_interference": CATCHER_INTERFERENCE,
+    "stripped": STRIPPED,
+    "sb_in_advance": SB_IN_ADVANCE,
+    "cs_then_pickoff": CS_THEN_PICKOFF,
+    "oa_throw": OA_THROW,
+    "ninety_nine": NINETY_NINE,
+    "inferred": INFERRED,
+    "strikeout_advance": STRIKEOUT_ADVANCE,
+    "sac": SAC,
 }
 
 
