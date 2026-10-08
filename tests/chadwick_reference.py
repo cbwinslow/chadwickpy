@@ -54,7 +54,7 @@ class ChadwickReference:
             run = subprocess.run(
                 [
                     self.cwevent,
-                    "-q",
+                    "-Q",
                     "-y",
                     str(year),
                     "-n",

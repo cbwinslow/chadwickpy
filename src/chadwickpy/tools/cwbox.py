@@ -1,6 +1,6 @@
 """Port of Chadwick's ``cwbox`` plain-text mode (``src/cwtools/cwbox.c``), the boxscore generator.
 
-Chadwick is Copyright (c) 2002-2023 Dr T L Turocy and the Chadwick Baseball
+Chadwick is Copyright (c) 2002-2026 Dr T L Turocy and the Chadwick Baseball
 Bureau, licensed GPL-2.0-or-later; this module is a derivative of it and keeps
 that notice. One function per ``cwbox_print_*`` function, each returning the text
 the C ``printf`` calls write. The XML output (``-X``) is in ``cwboxxml``, SportsML (``-S``) in
@@ -9,8 +9,6 @@ the C ``printf`` calls write. The XML output (``-X``) is in ``cwboxxml``, Sports
 A C ``NULL`` string printed through ``%s`` is "(null)" (glibc). Where the C
 dereferences ``NULL`` or reads an uninitialised variable, this port raises
 ``ValueError``. Messages Chadwick prints to stderr go to ``logging``.
-Like the C (``cwbox_print_header``), a day game is never marked ``(D)``: the C compares
-the ``daynight`` field with the literal ``"g_day"`` (the same typo is kept).
 """
 
 import logging
@@ -103,7 +101,7 @@ def _print_header(game: Game, visitors: Roster | None, home: Roster | None) -> s
     else:
         out = f"     Game of {g_month}/{g_day}/{g_year}, game {number} -- {away} at {host}"
     daynight = _info(game, "daynight")
-    if daynight is not None and daynight == "g_day":
+    if daynight is not None and daynight == "day":
         out += " (D)\n"
     elif daynight is not None and daynight == "night":
         out += " (N)\n"
@@ -128,12 +126,7 @@ def _print_player(player: BoxPlayer, roster: Roster | None) -> str:
     bio = roster.player_find(player.player_id) if roster is not None else None
     name = _buffer_name(bio) if bio is not None else player.name
 
-    if player.ph_inn > 0 and player.positions[0] != 11:
-        posstr = "ph"
-    elif player.pr_inn > 0 and player.positions[0] != 12:
-        posstr = "pr"
-    else:
-        posstr = ""
+    posstr = ""
     for pos in range(player.num_positions):
         if len(posstr) > 0:
             posstr += "-"

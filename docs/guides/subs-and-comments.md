@@ -35,4 +35,4 @@ event it follows and, for ejections, who was ejected and why.
 "TOR200705310",36,"$Erstad hurt ankle swinging and missing at 2-1 pitch. Popping sound heard from dugout",...
 ```
 
-Both tools take the same filters as the others: `-i`, `-s`, `-e`, `-y`, `-q`, `-n`.
+Both tools take the same filters as the others: `-i`, `-s`, `-e`, `-y`, `-D`, `-Q`, `-n`.

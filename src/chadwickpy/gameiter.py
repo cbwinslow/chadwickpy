@@ -1,6 +1,6 @@
 """Port of Chadwick's game iterator (``src/cwlib/gameiter.c``).
 
-Chadwick is Copyright (c) 2002-2023 Dr T L Turocy and the Chadwick Baseball
+Chadwick is Copyright (c) 2002-2026 Dr T L Turocy and the Chadwick Baseball
 Bureau, licensed GPL-2.0-or-later; this module is a derivative of it and keeps
 that notice. Names map onto the C functions (``cw_gamestate_x`` -> ``State.x``
 or a module function) so the two can be read side by side.
@@ -23,6 +23,11 @@ from chadwickpy.parse import (
 from chadwickpy.roster import Roster, roster_batting_hand, roster_throwing_hand
 
 POS_P, POS_C, POS_MAX, POS_DH, POS_PH, POS_PR = 1, 2, 9, 10, 11, 12
+
+
+def _strlcpy50(value: str | None) -> str:
+    """``CW_STRLCPY`` into ``char[50]`` (0.11.0): at most 49 bytes are kept, NULL gives ""."""
+    return "" if value is None else value[:49]
 
 
 @dataclass(slots=True)
@@ -148,25 +153,31 @@ class State:
     def _place_runner(self, base: int, runner: str) -> None:
         """Tiebreaker runner: responsibility goes to the current pitcher and catcher."""
         r = self.runners[base]
-        r.runner = runner
-        r.pitcher = self.fielders[1][1 - self.batting_team] or ""
-        r.catcher = self.fielders[2][1 - self.batting_team] or ""
+        r.runner = _strlcpy50(runner)
+        r.pitcher = _strlcpy50(self.fielders[1][1 - self.batting_team])
+        r.catcher = _strlcpy50(self.fielders[2][1 - self.batting_team])
         r.is_auto = 1
         self.num_auto_runners[self.batting_team] += 1
 
     def _place_batter(self, batter: str, event_type: int) -> None:
         r = self.runners[0]
-        r.runner = batter
+        r.runner = _strlcpy50(batter)
         if event_type in (Ev.WALK, Ev.INTENTIONALWALK) and self.walk_pitcher:
+            if len(self.walk_pitcher) > 49:
+                # The C does a plain strcpy into char[50] here and overflows into the catcher
+                # field (then the catcher copy overwrites the tail); not reproduced.
+                raise ValueError(
+                    "walk pitcher ID longer than 49 bytes (strcpy overflow in Chadwick)"
+                )
             r.pitcher = self.walk_pitcher
         else:
-            r.pitcher = self.fielders[POS_P][1 - self.batting_team] or ""
-        r.catcher = self.fielders[POS_C][1 - self.batting_team] or ""
+            r.pitcher = _strlcpy50(self.fielders[POS_P][1 - self.batting_team])
+        r.catcher = _strlcpy50(self.fielders[POS_C][1 - self.batting_team])
         r.src_event = self.event_count
         r.is_auto = 0
 
     def _replace_runner(self, base: int, runner: str) -> None:
-        self.runners[base].runner = runner
+        self.runners[base].runner = _strlcpy50(runner)
 
     def _move_runner(self, src: int, dest: int) -> None:
         s, d = self.runners[src], self.runners[dest]
@@ -361,23 +372,29 @@ class State:
                 return i
         return -1
 
-    def player_position(self, team: int, player_id: str | None) -> int:
-        """``cw_gamestate_player_position``"""
+    def runner_position(self, team: int, player_id: str | None) -> int:
+        """``cw_gamestate_runner_position``: the position associated with a runner, without the
+        batted-around adjustment used for the batter's PH/PR statistics."""
         for i in range(1, 10):
             row = self.lineups[i][team]
             if row.player_id is not None and row.player_id == player_id:
                 if row.position > 10 and self.dh_slot[team] == i:
                     # PH for the DH is treated as the DH right away (code 10)
                     return 10
-                if row.position > 10 and not self.ph_flag:
-                    # PH/PR who bat again in the same inning get position 0
-                    return 0
                 return row.position
         # Pitcher last: the pitcher can bat even though the DH was in effect
         row = self.lineups[0][team]
         if row.player_id is not None and row.player_id == player_id:
             return row.position
         return -1
+
+    def player_position(self, team: int, player_id: str | None) -> int:
+        """``cw_gamestate_player_position``"""
+        position = self.runner_position(team, player_id)
+        if position > 10 and not self.ph_flag:
+            # PH/PR who bat again in the same inning get position 0
+            return 0
+        return position
 
     # -- responsibility (rule 10.18) --------------------------------------
 
@@ -555,7 +572,7 @@ class GameIter:
         for base in (1, 2, 3):
             pitcher = ev.presadj[base]
             if pitcher is not None:
-                st.runners[base].pitcher = pitcher
+                st.runners[base].pitcher = _strlcpy50(pitcher)
 
         if ev.event_text != "NP":
             st.batter_hand = ev.batter_hand
@@ -639,6 +656,7 @@ def _copy_data(d: EventData) -> EventData:
         d.advance[:],
         d.rbi_flag[:],
         d.fc_flag[:],
+        d.primary_out_flag[:],
         d.muff_flag[:],
         d.play[:],
         d.sh_flag,
@@ -665,7 +683,7 @@ def _copy_data(d: EventData) -> EventData:
         d.touches[:],
         d.error_types[:],
         d.batted_ball_type,
-        d.hit_location,
+        hit_location=d.hit_location,  # inferred_batted_ball_type is not copied in C
     )
 
 

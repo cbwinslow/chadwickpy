@@ -1,13 +1,13 @@
 """Port of Chadwick's ``cwevent`` field logic (``src/cwtools/cwevent.c``).
 
-Chadwick is Copyright (c) 2002-2023 Dr T L Turocy and the Chadwick Baseball
+Chadwick is Copyright (c) 2002-2026 Dr T L Turocy and the Chadwick Baseball
 Bureau, licensed GPL-2.0-or-later; this module is a derivative of it and keeps
 that notice. One function per ``cwevent`` field, in the same order, producing
 the text ``cwevent -q`` (quoted/ascii mode) prints for that field. Rows are
 dicts keyed by the cwevent column names.
 
-A C ``NULL`` string printed through ``%s`` is "(null)" (glibc); ``None`` renders
-that way here so unset players match.
+0.11.0 prints every string field through ``cw_buffer_emit_string``, which turns a ``NULL``
+into "" (0.10 passed it to ``%s``, which glibc prints as "(null)"); ``None`` renders "" here.
 """
 
 import re
@@ -30,7 +30,7 @@ from chadwickpy.tools.tools import iterate_games
 
 
 def _s(value: str | None) -> str:
-    return "(null)" if value is None else value
+    return "" if value is None else value
 
 
 def _tf(flag: object) -> str:
@@ -262,7 +262,7 @@ def _run_position(base: int) -> Field:
         st = c.gi.state
         if not st.base_occupied(base):
             return "0"
-        return str(st.player_position(st.batting_team, st.runners[base].runner))
+        return str(st.runner_position(st.batting_team, st.runners[base].runner))
 
     return f
 
@@ -288,7 +288,10 @@ def _pitches(criterion: frozenset[str]) -> Field:
 def _force(base: int) -> Field:
     def f(c: _Ctx) -> str:
         d = c.gi.data
-        return _tf(d.fc_flag[base] and (d.gdp_flag or d.force_flag))
+        return _tf(
+            d.fc_flag[base]
+            and (d.gdp_flag or (d.dp_flag and d.primary_out_flag[base]) or d.force_flag)
+        )
 
     return f
 
@@ -302,7 +305,7 @@ def _fielded_by_id(c: _Ctx) -> str:
 
 def _team_id(c: _Ctx, which: str) -> str:
     g = c.gi.game
-    return _s(g.info_lookup(which))  # only a missing record is "(null)", not an empty value
+    return _s(g.info_lookup(which))
 
 
 def _base_state_end(c: _Ctx) -> str:
@@ -746,18 +749,18 @@ _FORMATS: tuple[tuple[str, str] | None, ...] = (
     ('"%s"', "%-8s"),
     ('"%s"', "%-8s"),
     ('"%s"', "%-8s"),
-    ("%d", "%02d"),
-    ("%d", "%02d"),
-    ("%d", "%02d"),
-    ("%d", "%02d"),
-    ("%d", "%02d"),
-    ("%d", "%02d"),
-    ("%d", "%02d"),
-    ("%d", "%02d"),
-    ("%d", "%02d"),
-    ("%d", "%02d"),
-    ("%d", "%02d"),
-    ("%d", "%02d"),
+    ("%d", "%2d"),
+    ("%d", "%2d"),
+    ("%d", "%2d"),
+    ("%d", "%2d"),
+    ("%d", "%2d"),
+    ("%d", "%2d"),
+    ("%d", "%2d"),
+    ("%d", "%2d"),
+    ("%d", "%2d"),
+    ("%d", "%2d"),
+    ("%d", "%2d"),
+    ("%d", "%2d"),
     ("%d", "%d"),
     ('"%s"', "%-8s"),
     ('"%c"', "%c"),
@@ -768,7 +771,7 @@ _FORMATS: tuple[tuple[str, str] | None, ...] = (
     ("%d", "%d"),
     ("%d", "%d"),
     ("%d", "%d"),
-    ("%d", "%02d"),
+    ("%d", "%2d"),
     ("%d", "%d"),
     ("%d", "%d"),
     ("%d", "%d"),
@@ -829,7 +832,7 @@ def _custom(index: int, ascii_: bool, c: _Ctx, value: str) -> str:
     # cwevent_runner{1,2,3}_defensive_position
     base = {118: 1, 121: 2, 124: 3}[index]
     if not c.gi.state.base_occupied(base):
-        return "0"
+        return "0" if ascii_ else " 0"
     return value if ascii_ else f"{int(value):2d}"
 
 

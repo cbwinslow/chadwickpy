@@ -20,7 +20,7 @@ description: How chadwickpy compares with the original Chadwick C tools - perfor
 
 ## Benchmarks & Performance
 
-The benchmark below compares original Chadwick C (0.10.0) against `chadwickpy` on the complete **2024 MLB Retrosheet season** (30 team event files, 2,430 games, 188,937 plays):
+The benchmark below compares original Chadwick C (0.10.0, measured before 0.11.0 was released) against `chadwickpy` on the complete **2024 MLB Retrosheet season** (30 team event files, 2,430 games, 188,937 plays):
 
 | Configuration | Total Time | Plays / Second | Output Match |
 |---|---|---|---|
@@ -98,11 +98,22 @@ It never starts more workers than there are files. See [using several cores](../
 * `-j` / `--jobs` and the `CHADWICK_JOBS` variable exist only here (the C tools run one process).
 * On Windows, wildcards such as `2010*.EV*` are expanded as Chadwick's Windows build does. Unlike
   that build, a folder in the pattern is kept (`sub\*.EVA`).
-* The reference is Chadwick's development commit `c685ab5` (it reports version 0.10.0), not
-  the 0.10.0 release tag, whose output differs on 2025 files.
+* The reference is the Chadwick **0.11.0** release (tag `v0.11.0`, 2026-09-10). Earlier chadwickpy
+  versions (up to 0.3.0) followed the development commit `c685ab5` that preceded it; see
+  [Chadwick versions](#chadwick-versions).
 * Inputs that make the C behave in undefined ways are not compared.
 
 ## If both are installed
 
 The command names are identical. Whichever directory comes first on `PATH` runs. To always
 get this package's version, use `chadwickpy cwevent ...` or `python -m chadwickpy cwevent ...`.
+
+## Chadwick versions
+
+chadwickpy follows the official Chadwick release exactly, including its command line. Chadwick 0.11.0
+changed the quiet switch from `-q` to **`-Q`** (the C tools now reject `-q`), added `-D dir` (where the
+team and roster files are), changed how `cwgame` writes dates (`-dsf`, `-dsp`, `-dnf`, `-dnp`) and
+added fields (`cwgame` field 84, `cwsub` `COUNT_TX`), and tightened the play parser (for example `?` is
+no longer an unknown fielder, and pickoffs may follow a caught-stealing). chadwickpy 0.4.0 does the
+same. If you upgrade from 0.3.x, replace `-q` with `-Q` in your scripts. A weekly check builds the newest
+Chadwick and runs the whole test suite against it, so a future change is noticed.

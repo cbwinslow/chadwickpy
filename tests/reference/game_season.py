@@ -23,7 +23,7 @@ from chadwick_tool import run_tool  # noqa: E402
 from chadwickpy.tools.cwgame import game_lines, header_line  # noqa: E402
 from chadwickpy.tools.tools import read_rosters  # noqa: E402
 
-ALL, EXT = tuple(range(85)), tuple(range(97))
+ALL, EXT = tuple(range(86)), tuple(range(97))
 
 
 def main() -> int:
@@ -40,7 +40,7 @@ def main() -> int:
             path = Path(tmp) / base
             path.write_bytes(data)
             for ascii_, args in ((True, ["-n"]), (False, ["-ft"])):
-                run = run_tool("cwgame", path, [*args, "-f", "0-84", "-x", "0-96"], support)
+                run = run_tool("cwgame", path, [*args, "-f", "0-85", "-x", "0-96"], support)
                 assert run is not None, "cwgame not on PATH"
                 lines = list(game_lines(data, league, ascii_=ascii_, fields=ALL, ext_fields=EXT))
                 if ascii_:

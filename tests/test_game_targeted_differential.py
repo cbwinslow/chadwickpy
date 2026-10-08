@@ -134,14 +134,12 @@ CASES: dict[str, tuple[str, tuple[int, ...], tuple[int, ...]]] = {
     "date_no_date": (game(drop=("date",)), DATE, ()),
     "dow_unparsable": (game({"date": "garbage"}), DOW, ()),
     "dow_year_no_slash": (game({"date": "2020-07-02"}), DOW, ()),
-    "dow_month_no_slash": (game({"date": "2020/07-02"}), DOW, ()),
-    "dow_no_day": (game({"date": "2020/07/"}), DOW, ()),
     "dow_two_digit_year": (game({"date": "20/07/02"}), DOW, ()),
     "dow_month13_filtered_out": (game({"date": "2020/13/02"}), DOW, ()),
     "date_short": (game({"date": "2020/7/2"}), DATE, ()),
     "date_short_all": (game({"date": "2020/7/2"}), ALLF, ()),
     "dow_jan": (game({"date": "2020/01/02"}), DOW, ()),
-    "bline_short": (boxgame("stat,bline,v1,0,1,1\n"), tuple(range(46)) + (84,), ()),
+    "bline_short": (boxgame("stat,bline,v1,0,1,1\n"), tuple(range(46)) + (84, 85), ()),
     "bline_short_all": (boxgame("stat,bline,v1,0,1,1\nstat,bline,h1,1,1,1\n"), ALL, EXT),
     "dline_short": (boxgame("stat,dline,v1,0,1,2\n"), ALL, EXT),
     "dline_short_home": (boxgame("stat,dline,h1,1,1,2,1\nstat,dline,v1,0,1,2,1,1\n"), ALL, EXT),
@@ -189,6 +187,10 @@ KNOWN: dict[str, tuple[str, tuple[int, ...], tuple[int, ...]]] = {
     # badj and then a play record with no fields, before any play: the C compares the missing
     # batter with strcmp (crash); the port treats a missing batter as no match
     "badj_no_event": CASES.pop("badj_no_event"),
+    # sscanf("%d/%d/%d") leaves month or day unset: Chadwick 0.10 failed here, 0.11.0 prints
+    # whatever the stack holds (Tuesday for both); the port raises (ADR-003)
+    "dow_month_no_slash": (game({"date": "2020/07-02"}), DOW, ()),
+    "dow_no_day": (game({"date": "2020/07/"}), DOW, ()),
     # 60 line scores: the C writes past linescore[50][2] into the totals that follow it
     "line60": (boxgame("line,0," + _bpl(60) + "\n"), ALL, EXT),
 }
@@ -229,6 +231,9 @@ def test_known_differences_are_as_recorded() -> None:
         assert real is not None and port == real
     for name in ("dow_month13", "dow_month0"):
         real, port = outcome(*KNOWN[name], wide=True)
+        assert real is not None and port is None
+    for name in ("dow_month_no_slash", "dow_no_day"):
+        real, port = outcome(*KNOWN[name])
         assert real is not None and port is None
     real, port = outcome(*KNOWN["badj_no_event"])
     assert real is None and port is not None

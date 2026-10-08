@@ -32,6 +32,14 @@ real Windows machine.
 **How does its speed compare to the original C tools?**
 Single-file parsing runs at ~0.66 s per team file (pure Python). For full multi-file seasons, `chadwickpy` automatically runs files in parallel (one worker per usable CPU, leaving one free on machines with more than four, and never more workers than files), processing an entire 2,430-game season in **a few seconds** on a multi-core machine. That matches the C tools running on *one* core; the C tools are also faster when run on several cores. See [compared with Chadwick](compared-with-chadwick.md) for detailed benchmarks.
 
+**Which Chadwick version does it follow?**
+The official release **0.11.0** (chadwickpy 0.4.0 and later). Version 0.3.x followed the development
+commit before it. See [compared with Chadwick](compared-with-chadwick.md#chadwick-versions).
+
+**Why does `-q` print "Invalid option"?**
+Chadwick 0.11.0 renamed the quiet switch to `-Q`, and chadwickpy does the same so that it behaves
+exactly like the C tools. Use `-Q`.
+
 **Which seasons is it verified on?**
 Every Retrosheet season that has game data: 1908 to 2025 with play-by-play, plus 1897 to 1907, which
 Retrosheet publishes as box scores only. See [how it was verified](verification.md).
@@ -56,7 +64,7 @@ No. Other Python projects wrap Chadwick's C library and need it built. `chadwick
 separate rewrite with no C at all.
 
 **What licence is it under?**
-GPL-3.0-or-later. It is a derivative of Chadwick (GPL-2.0-or-later, Copyright 2002-2023
+GPL-3.0-or-later. It is a derivative of Chadwick (GPL-2.0-or-later, Copyright 2002-2026
 Dr T L Turocy and the Chadwick Baseball Bureau), which is credited in `NOTICE` and in each
 source file. It is independent: Chadwick and Retrosheet do not endorse it.
 

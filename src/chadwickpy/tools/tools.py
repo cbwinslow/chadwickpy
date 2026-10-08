@@ -1,6 +1,6 @@
 """Port of the parts of Chadwick's ``src/cwtools/cwtools.c`` that every tool shares.
 
-Chadwick is Copyright (c) 2002-2023 Dr T L Turocy and the Chadwick Baseball
+Chadwick is Copyright (c) 2002-2026 Dr T L Turocy and the Chadwick Baseball
 Bureau, licensed GPL-2.0-or-later; this module is a derivative of it and keeps
 that notice.
 
@@ -80,16 +80,17 @@ def iterate_games(
             )
 
 
-def date_digits(date: str) -> str:
+def date_digits(date: str, indices: tuple[int, ...] = (0, 1, 2, 3, 5, 6, 8, 9)) -> str:
     """The eight characters ``cwgame_date`` and ``cwdaily_date`` print: date[0..3], [5], [6], [8],
     [9] (``YYYYMMDD`` for a ``YYYY/MM/DD`` date), read with ``%c`` and no length check.
 
     For a date shorter than 10 characters the C reads the string's terminating NUL, which is in
     bounds, as one of those characters. ``printf("%s")`` then stops at it, so the text ends there
     and the rest of the output row is lost. The result holds that NUL (the caller cuts the row at
-    it). Where the C would read beyond the terminator the bytes are leftovers, so that raises."""
+    it). Where the C would read beyond the terminator the bytes are leftovers, so that raises.
+    ``indices`` are the characters read, in print order (``cwgame`` has several date formats)."""
     out: list[str] = []
-    for index in (0, 1, 2, 3, 5, 6, 8, 9):
+    for index in indices:
         if index < len(date):
             out.append(date[index])
         elif index == len(date):

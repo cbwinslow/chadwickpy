@@ -1,6 +1,6 @@
 """Port of Chadwick's ``cwsub`` (``src/cwtools/cwsub.c``), the substitution descriptor.
 
-Chadwick is Copyright (c) 2002-2023 Dr T L Turocy and the Chadwick Baseball
+Chadwick is Copyright (c) 2002-2026 Dr T L Turocy and the Chadwick Baseball
 Bureau, licensed GPL-2.0-or-later; this module is a derivative of it and keeps
 that notice. One function per ``cwsub`` field, in the same order, each returning
 the text the C ``sprintf`` writes. ``ascii`` is the C global of the same name:
@@ -106,7 +106,12 @@ def _pitch_count(criterion: frozenset[str]) -> Field:
     return f
 
 
-# (function, header, description) for fields 0-24
+def _count_text(a: bool, gi: GameIter, sub: Appearance) -> str:
+    """Field 25 (0.11.0): ``cw_buffer_emit_string(buffer, event->count, 2)``"""
+    return _str(a, _event(gi).count, 2)
+
+
+# (function, header, description) for fields 0-25
 FIELDS: tuple[tuple[Field, str, str], ...] = (
     (_game_id, "GAME_ID", "game id"),
     (_inning, "INN_CT", "inning"),
@@ -181,6 +186,7 @@ FIELDS: tuple[tuple[Field, str, str], ...] = (
         "PA_OTHER_STRIKE_CT",
         "number of other strikes in plate appearance",
     ),
+    (_count_text, "COUNT_TX", "text of count as appears in event file"),
 )
 
 COLUMNS = tuple(header for _, header, _ in FIELDS)

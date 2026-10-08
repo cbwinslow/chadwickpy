@@ -2,8 +2,9 @@
 coverage tool does not see) or not at all. Task 2.3 of
 ``openspec/changes/verify-port-completeness``.
 
-* a fatal error in a box-score file whose message has a NULL string in it, which glibc prints as
-  ``(null)``: run in this process, against the real tools;
+* a fatal error in a box-score file (a ``stat,dline`` record with no fields), and a box score
+  whose message text has a NULL string in it, which glibc prints as ``(null)``: run in this
+  process, against the real tools;
 * the same error raised inside a parallel worker;
 * the control-group parser skipping lines it cannot use (no Chadwick counterpart: the C has no
   CPU-limit logic).
@@ -34,24 +35,41 @@ needs_tools = pytest.mark.skipif(
 NAME = "g.EBR"
 
 
-def scratch(tmp: Path) -> Path:
+def scratch(tmp: Path, text: str | None = None) -> Path:
     tmp.mkdir()
-    (tmp / NAME).write_bytes(box_game_missing_player_field().encode("latin-1"))
+    (tmp / NAME).write_bytes((text or box_game_missing_player_field()).encode("latin-1"))
     (tmp / f"TEAM{YEAR}").write_text("")
     return tmp
 
 
 def args(tool: str) -> list[str]:
-    return ["-q", "-y", str(YEAR), *([] if tool == "cwbox" else FLAGS[tool]), NAME]
+    return ["-Q", "-y", str(YEAR), *([] if tool == "cwbox" else FLAGS[tool]), NAME]
 
 
 @needs_tools
 @pytest.mark.parametrize("tool", ["cwgame", "cwdaily", "cwbox"])
-def test_null_string_in_a_message_prints_null(tmp_path: Path, tool: str) -> None:
-    """``cannot find entry for player '(null)' listed in dline``: exit status, stdout, stderr"""
+def test_dline_without_fields_is_rejected(tmp_path: Path, tool: str) -> None:
+    """Chadwick 0.11.0 validates a dline's team before it looks the player up, so a bare
+    ``stat,dline`` is ``invalid team -1`` (the old ``player '(null)'`` message is unreachable:
+    a record with a missing player field also has a missing team field)."""
     real = run_real(tool, args(tool), scratch(tmp_path / "real"))
     port = run_port(tool, args(tool), scratch(tmp_path / "port"))
-    assert b"(null)" in real[2]
+    assert real[0] == 1
+    assert b"invalid team -1 in dline record (valid values are 0-1)." in real[2]
+    assert port == real
+
+
+@needs_tools
+def test_null_string_in_a_message_prints_null(tmp_path: Path) -> None:
+    """A game with no ``info,visteam`` record: cwbox prints the NULL visitor name through ``%s``
+    in its header, i.e. ``(null)``: exit status, stdout, stderr. (cwgame and cwdaily guard these
+    lookups with ``? : ""`` in 0.11.0, so only cwbox reaches the NULL ``%s``.)"""
+    text = box_game_missing_player_field()
+    text = text.replace("stat,dline\r\n", "").replace("info,visteam,BBB\r\n", "")
+    real = run_real("cwbox", args("cwbox"), scratch(tmp_path / "real", text))
+    port = run_port("cwbox", args("cwbox"), scratch(tmp_path / "port", text))
+    assert real[0] == 0
+    assert b"(null) at AAA" in real[1]
     assert port == real
 
 
@@ -113,7 +131,7 @@ def test_missing_catcher_message_prints_null(tmp_path: Path, name: str) -> None:
         d.mkdir()
         (d / NAME).write_bytes(text.encode("latin-1"))
         (d / "TEAM2020").write_text("")
-    a = ["-q", "-y", "2020", "-n", NAME]
+    a = ["-Q", "-y", "2020", "-n", NAME]
     real = run_real("cwgame", a, real_dir)
     port = run_port("cwgame", a, port_dir)
     assert b"(null)" in real[2]

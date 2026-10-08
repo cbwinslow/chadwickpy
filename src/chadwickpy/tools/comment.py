@@ -1,6 +1,6 @@
 """Port of Chadwick's ``cwcomment`` (``src/cwtools/cwcomment.c``), the comment extractor.
 
-Chadwick is Copyright (c) 2002-2023 Dr T L Turocy and the Chadwick Baseball
+Chadwick is Copyright (c) 2002-2026 Dr T L Turocy and the Chadwick Baseball
 Bureau, licensed GPL-2.0-or-later; this module is a derivative of it and keeps
 that notice. One function per ``cwcomment`` field, in the same order, each
 returning the text the C ``sprintf`` writes. ``ascii`` is the C global of the

@@ -1,6 +1,6 @@
 """Port of Chadwick's game container (``src/cwlib/game.c``, reading side).
 
-Chadwick is Copyright (c) 2002-2023 Dr T L Turocy and the Chadwick Baseball
+Chadwick is Copyright (c) 2002-2026 Dr T L Turocy and the Chadwick Baseball
 Bureau, licensed GPL-2.0-or-later; this module is a derivative of it and keeps
 that notice. It follows ``cw_game_read``: events carry the substitutions,
 comments and adjustment records (``badj``, ``padj``, ``ladj``, ``radj``,
@@ -11,7 +11,7 @@ import logging
 from collections.abc import Iterator
 from dataclasses import dataclass, field
 
-from chadwickpy.file import BUFSIZE, CFile, StrTok, cw_atoi
+from chadwickpy.file import BUFSIZE, CFile, Tokenizer, cw_atoi
 
 log = logging.getLogger("chadwickpy")
 
@@ -237,7 +237,7 @@ def _warn_invalid_record(game: Game, line: str) -> None:
     log.warning("WARNING: In %s, skipping invalid record:\n         %s", game.game_id, line)
 
 
-def _tokens(tok: StrTok, stop_blank: bool, stop_space: bool) -> list[str | None]:
+def _tokens(tok: Tokenizer, stop_blank: bool, stop_space: bool) -> list[str | None]:
     """The ``data[256]`` loops of ``cw_game_read``: tokens up to the terminating one.
 
     Returns the tokens before the terminator, or all 256 (so the caller can tell the
@@ -258,14 +258,14 @@ def _tokens(tok: StrTok, stop_blank: bool, stop_space: bool) -> list[str | None]
 
 def read_game(file: CFile) -> Game | None:
     """``cw_game_read``: the next game, or ``None`` at the end of the file or on a bad header."""
-    tok = StrTok()
+    tok = Tokenizer()
     bat_hand, bat_hand_batter = " ", ""
     pit_hand, pit_hand_pitcher = " ", ""
     auto_runner = ""
     presadj = ["", "", "", ""]
     ladj_align = ladj_slot = auto_base = 0
 
-    buf = file.fgets(BUFSIZE)
+    buf = file.getline()
     if buf is None:
         return None
     first = tok(buf)
@@ -277,14 +277,10 @@ def read_game(file: CFile) -> Game | None:
     else:
         return None
 
-    while not file.eof:
+    while True:
         filepos = file.getpos()
-        buf = file.fgets(BUFSIZE)
+        buf = file.getline()
         if buf is None:
-            if file.eof:
-                break
-            return None
-        if file.eof:
             break
 
         line = buf
@@ -319,7 +315,9 @@ def read_game(file: CFile) -> Game | None:
                     ev = _need_event(last, line)
                     ev.pitcher_hand = pit_hand
                     ev.pitcher_hand_id = pit_hand_pitcher
-                    pit_hand, pit_hand_pitcher = " ", ""
+                    if p_play != "NP":
+                        # padj applies to the next non-NP play
+                        pit_hand, pit_hand_pitcher = " ", ""
                 if ladj_slot != 0:
                     ev = _need_event(last, line)
                     ev.ladj_align = ladj_align
@@ -384,7 +382,13 @@ def read_game(file: CFile) -> Game | None:
                 ev = _need_event(last, line)
                 ev.pitcher_hand = pit_hand
                 ev.pitcher_hand_id = pit_hand_pitcher
-                pit_hand, pit_hand_pitcher = " ", ""
+                if play is None:
+                    raise ValueError(
+                        f"play record with no play field (Chadwick would crash): {line!r}"
+                    )
+                if play != "NP":
+                    # padj applies to the next non-NP play
+                    pit_hand, pit_hand_pitcher = " ", ""
             if ladj_slot != 0:
                 ev = _need_event(last, line)
                 ev.ladj_align = ladj_align
@@ -411,6 +415,10 @@ def read_game(file: CFile) -> Game | None:
                 _need_event(game.events[-1] if game.events else None, line).subs.append(
                     Appearance(pid, name, team_n, slot_n, pos_n)
                 )
+                if pos_n == 1 and pit_hand != " " and pid != pit_hand_pitcher:
+                    # A pending padj is for the pitcher being relieved, so it no longer applies
+                    # once a different pitcher takes the mound.
+                    pit_hand, pit_hand_pitcher = " ", ""
         elif rtype == "com":
             comment = tok(None)
             if comment is not None:
@@ -459,9 +467,9 @@ def read_game(file: CFile) -> Game | None:
                 if 1 <= base <= 3:
                     presadj[base] = pitcher[: BUFSIZE - 1]
                 else:
-                    _warn_invalid_record(game, line)
+                    _warn_invalid_record(game, tok.line_text())
         else:
-            _warn_invalid_record(game, line)
+            _warn_invalid_record(game, tok.line_text())
 
     return game
 

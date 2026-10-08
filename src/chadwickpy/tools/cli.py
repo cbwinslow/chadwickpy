@@ -2,7 +2,7 @@
 handling) and the option parsing, messages and field lists of ``cwevent``, ``cwgame``,
 ``cwdaily``, ``cwsub``, ``cwcomment`` and ``cwbox``.
 
-Chadwick is Copyright (c) 2002-2023 Dr T L Turocy and the Chadwick Baseball
+Chadwick is Copyright (c) 2002-2026 Dr T L Turocy and the Chadwick Baseball
 Bureau, licensed GPL-2.0-or-later; this module is a derivative of it and keeps
 that notice. The C keeps the options in globals and reaches each tool through function
 pointers (``cwtools_parse_command_line`` and friends); here a ``Tool`` holds the same hooks
@@ -37,7 +37,7 @@ from chadwickpy.tools.cwbox import process_game as box_process_game
 from chadwickpy.tools.tools import read_rosters, select_game
 from chadwickpy.xmlwrite import XMLDoc, xml_document_cleanup
 
-VERSION = "0.10.0"
+VERSION = "0.11.0"
 log = logging.getLogger("chadwickpy")
 
 
@@ -59,12 +59,14 @@ class Options:
     first_date: str = "0101"
     last_date: str = "1231"
     game_id: str = ""
+    data_dir: str = ""  # -D: where TEAMyyyy and the roster files are (empty: current directory)
     ascii: bool = True
     quiet: bool = False
     print_header: bool = False
     use_xml: bool = False
     use_sportsml: bool = False
     jobs: int | None = None
+    date_format: int = cwgame.CWGAME_DATE_NOSLASH_FULL  # cwgame -dsf, -dsp, -dnf, -dnp
 
 
 @dataclass
@@ -101,7 +103,7 @@ def welcome_message(tool: Tool, argv0: str) -> str:
     return (
         f"\n{tool.title}, version {VERSION}"
         f"\n  Type '{argv0} -h' for help.\n"
-        "Copyright (c) 2002-2023\nDr T L Turocy, Chadwick Baseball Bureau (ted.turocy@gmail.com)\n"
+        "Copyright (c) 2002-2026\nDr T L Turocy, Chadwick Baseball Bureau (ted.turocy@gmail.com)\n"
         "This is free software, subject to the terms of the GNU GPL license.\n\n"
     )
 
@@ -163,6 +165,14 @@ def parse_field_list(text: str, maxfield: int, io: IO, program_name: str) -> set
     return chosen
 
 
+_DATE_SWITCHES = {
+    "-dsf": cwgame.CWGAME_DATE_SLASH_FULL,
+    "-dsp": cwgame.CWGAME_DATE_SLASH_PARTIAL,
+    "-dnf": cwgame.CWGAME_DATE_NOSLASH_FULL,
+    "-dnp": cwgame.CWGAME_DATE_NOSLASH_PARTIAL,
+}
+
+
 def parse_command_line(tool: Tool, argv: list[str], opts: Options, io: IO) -> int:
     """``<tool>_parse_command_line``: returns the index of the first file argument"""
     opts.year = ""
@@ -175,6 +185,12 @@ def parse_command_line(tool: Tool, argv: list[str], opts: Options, io: IO) -> in
             io.err(welcome_message(tool, argv[0]))
             io.err(tool.field_list())
             raise Exit(0)
+        elif arg in _DATE_SWITCHES and tool.name == "cwgame":
+            opts.date_format = _DATE_SWITCHES[arg]
+        elif arg == "-D":
+            i += 1
+            if i < len(argv):
+                opts.data_dir = argv[i][:1023]
         elif arg == "-e":
             i += 1
             if i < len(argv):
@@ -183,7 +199,7 @@ def parse_command_line(tool: Tool, argv: list[str], opts: Options, io: IO) -> in
             io.err(welcome_message(tool, argv[0]))
             io.err("".join(tool.help_lines))
             raise Exit(0)
-        elif arg == "-q":
+        elif arg == "-Q":
             opts.quiet = True
         elif arg == "-i":
             i += 1
@@ -240,16 +256,24 @@ def parse_command_line(tool: Tool, argv: list[str], opts: Options, io: IO) -> in
 
 def read_team_rosters(opts: Options, io: IO) -> League:
     """``cwtools_read_rosters``: ``TEAMyyyy`` (else ``teamyyyy``) and the ``.ROS`` files"""
-    filename = f"TEAM{opts.year}"
+    filename = _build_path(opts.data_dir, f"TEAM{opts.year}")
     team_file = _read(filename)
     if team_file is None:
         # Also try lowercase version
-        filename = f"team{opts.year}"
+        filename = _build_path(opts.data_dir, f"team{opts.year}")
         team_file = _read(filename)
         if team_file is None:
             io.err(f"Can't find teamfile ({filename})\n")
             raise Exit(1)
-    return read_rosters(team_file, opts.year, _read)
+    return read_rosters(team_file, opts.year, lambda name: _read(_build_path(opts.data_dir, name)))
+
+
+def _build_path(data_dir: str, filename: str) -> str:
+    """``cwtools_build_path``: ``-D`` directory (and a ``/`` unless it already ends in one) in
+    front of ``filename``; the file name alone when no directory was given"""
+    if not data_dir:
+        return filename
+    return data_dir + ("" if data_dir.endswith("/") else "/") + filename
 
 
 def _read(filename: str) -> bytes | None:
@@ -543,6 +567,7 @@ _COMMON_HELP = (
     "  -h        print this help\n",
     "  -i id     only process game given by id\n",
     "  -y year   Year to process (for teamyyyy and aaayyyy.ros).\n",
+    "  -D dir    Directory to find team and roster files (default is current directory)\n",
     "  -s start  Earliest date to process (mmdd).\n",
     "  -e end    Last date to process (mmdd).\n",
 )
@@ -550,7 +575,7 @@ _FORMAT_HELP = (
     "  -a        generate Ascii-delimited format files (default)\n",
     "  -ft       generate Fortran format files\n",
 )
-_QUIET_HELP = "  -q        operate quietly; do not output progress messages\n"
+_QUIET_HELP = "  -Q        operate quietly; do not output progress messages\n"
 _NAMES_HELP = "  -n        print field names in first row of output\n\n"
 
 
@@ -570,7 +595,12 @@ def _event_process(o: Options, io: IO, g: Game, v: Roster | None, h: Roster | No
 
 
 def _game_process(o: Options, io: IO, g: Game, v: Roster | None, h: Roster | None) -> None:
-    io.out(cwgame.game_line(g, v, h, o.ascii, o.fields, o.ext_fields) + "\n")
+    try:
+        line = cwgame.game_line(g, v, h, o.ascii, o.fields, o.ext_fields, o.date_format)
+    except cwgame.BufferTruncated as e:
+        io.err(f"{e}\n")  # the C prints this and calls exit(1)
+        raise ReportedError(str(e)) from e
+    io.out(line + "\n")
 
 
 def _daily_process(o: Options, io: IO, g: Game, v: Roster | None, h: Roster | None) -> None:
@@ -638,10 +668,15 @@ CWGAME = Tool(
         *_COMMON_HELP,
         *_FORMAT_HELP,
         "  -f flist  give list of fields to output\n",
-        "              Default is 0-83\n",
+        "              Default is 0-84\n",
         "  -x flist  give list of extended fields to output\n",
         "              Default is none\n",
         "  -d        print list of field numbers and descriptions\n",
+        "  The -dxx switches choose a date format for the gamedate field.\n",
+        "  -dsf      slashes, full year: mm/dd/yyyy\n",
+        "  -dsp      slashes, partial year: mm/dd/yy\n",
+        "  -dnf      no slashes, full year: yyyymmdd (the default)\n",
+        "  -dnp      no slashes, partial year: yymmdd\n",
         _QUIET_HELP,
         _NAMES_HELP,
     ),

@@ -26,9 +26,9 @@ from test_event_option_sweep import FILES, FORMATS, SELECTIONS  # noqa: E402
 
 # tool -> field-list option sets (default, a short list, every field)
 FIELDS = {
-    "cwgame": {"std": [], "low": ["-f", "0-5"], "all": ["-f", "0-84", "-x", "0-96"]},
+    "cwgame": {"std": [], "low": ["-f", "0-5"], "all": ["-f", "0-85", "-x", "0-96"]},
     "cwdaily": {"std": [], "low": ["-f", "0-5"], "all": ["-f", "0-153"]},
-    "cwsub": {"std": [], "low": ["-f", "0-5"], "all": ["-f", "0-24"]},
+    "cwsub": {"std": [], "low": ["-f", "0-5"], "all": ["-f", "0-25"]},
     "cwcomment": {"std": [], "low": ["-f", "0-3"], "all": ["-f", "0-9"]},
 }
 
@@ -41,7 +41,7 @@ CASES = [
 
 @pytest.mark.parametrize(("tool", "sel", "fmt", "fld", "files"), CASES)
 def test_option_combination(tmp_path: Path, tool: str, sel: str, fmt: str, fld: str, files: str):
-    args = ["-q", "-y", "2007", *SELECTIONS[sel], *FORMATS[fmt], *FIELDS[tool][fld], *FILES[files]]
+    args = ["-Q", "-y", "2007", *SELECTIONS[sel], *FORMATS[fmt], *FIELDS[tool][fld], *FILES[files]]
     real = run_real(tool, args, scratch(tmp_path, "real"))
     port = run_port(tool, args, scratch(tmp_path, "port"))
     assert real[0] == port[0], (tool, args)

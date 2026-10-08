@@ -65,7 +65,7 @@ CASES = [
 @pytest.mark.parametrize(("sel", "fmt", "fld", "files"), CASES)
 def test_cwevent_option_combination(tmp_path: Path, sel: str, fmt: str, fld: str, files: str):
     args = [
-        "-q",
+        "-Q",
         "-y",
         "2007",
         *SELECTIONS[sel],
@@ -85,7 +85,7 @@ def test_cwevent_option_combination(tmp_path: Path, sel: str, fmt: str, fld: str
 
 
 @pytest.mark.parametrize(
-    "extra", [[], ["-q"], ["-n"], ["-f", "0-3"], ["-x", "0-3"], ["-y", "2007"]]
+    "extra", [[], ["-Q"], ["-n"], ["-f", "0-3"], ["-x", "0-3"], ["-y", "2007"]]
 )
 def test_field_list_option_prints_the_field_table(tmp_path: Path, extra: list[str]) -> None:
     args = ["-d", *extra]

@@ -14,7 +14,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  CHADWICK_REF: c685ab5
+  CHADWICK_REF: v0.11.0
 
 jobs:
   lint:

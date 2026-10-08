@@ -29,7 +29,7 @@ from chadwickpy.tools.cli import TOOLS  # noqa: E402
 FIELD_COUNTS = {
     "cwgame": (85, 97),
     "cwdaily": (154, 0),
-    "cwsub": (25, 0),
+    "cwsub": (26, 0),
     "cwcomment": (10, 0),
 }
 FORMATS = {"ascii": ["-n"], "fixed": ["-ft"]}
@@ -55,7 +55,7 @@ def season_dirs() -> list[tuple[str, str, Path]]:
 def compare(tool: str, fmt: str, flags: list[str], dirs: list[tuple[str, str, Path]]) -> None:
     assert tool in TOOLS
     for year, name, work in dirs:
-        args = ["-q", "-y", year, *FORMATS[fmt], *flags, name]
+        args = ["-Q", "-y", year, *FORMATS[fmt], *flags, name]
         real = run_real(tool, args, work)
         port = run_port(tool, args, work)
         assert real[0] == port[0], (tool, name, flags)

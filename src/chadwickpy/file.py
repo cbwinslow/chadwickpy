@@ -1,15 +1,16 @@
 """Port of the reading helpers in Chadwick's ``src/cwlib/file.c``.
 
-Chadwick is Copyright (c) 2002-2023 Dr T L Turocy and the Chadwick Baseball
+Chadwick is Copyright (c) 2002-2026 Dr T L Turocy and the Chadwick Baseball
 Bureau, licensed GPL-2.0-or-later; this module is a derivative of it and keeps
 that notice.
 
-Chadwick reads event files with ``fgets(buf, 1024, file)`` and splits each line
-with ``cw_strtok``. Both are reproduced here byte for byte, including the
-quirks that decide what a file means: a line longer than 1023 bytes is read in
-pieces, a last line with no trailing newline is dropped, and text is handled as
-C strings, so a NUL byte ends a line. Text is held as ``latin-1`` so that one
-byte is one character, as in C.
+Chadwick 0.11.0 reads event, roster and team files with a record reader
+(``CWRecordReader``) and splits each line with a tokenizer (``CWTokenizer``). Both
+are reproduced here, including the quirks that decide what a file means: a line may
+be any length, every ``\r`` is dropped wherever it stands (so CRLF and CR-only
+breaks inside a line vanish), a last line with no trailing newline is read like any
+other, and text is handled as C strings, so a NUL byte ends a line. Text is held as
+``latin-1`` so that one byte is one character, as in C.
 """
 
 import logging
@@ -17,7 +18,7 @@ import re
 
 log = logging.getLogger("chadwickpy")
 
-BUFSIZE = 1024  # ``char buf[1024]`` in ``cw_game_read``
+BUFSIZE = 1024  # ``char batHandBatter[1024]`` and its siblings in ``cw_game_read``
 
 
 class ReportedError(ValueError):
@@ -28,36 +29,29 @@ class ReportedError(ValueError):
 
 
 class CFile:
-    """The part of a C ``FILE *`` that ``cw_game_read`` uses on an event file."""
+    """The part of a C ``FILE *`` that the record reader uses on a file."""
 
     def __init__(self, data: bytes) -> None:
         self._data = data
         self.pos = 0
         self.eof = False
 
-    def fgets(self, size: int) -> str | None:
-        """``fgets(buf, size, file)``: up to ``size - 1`` bytes, stopping after a newline.
+    def getline(self) -> str | None:
+        """``cw_record_reader_next``: the next line without its ``\n`` and without any ``\r``.
 
-        Returns ``None`` when no byte could be read. The end-of-file flag is set
-        when the read ran into the end of the file, even if bytes were returned.
+        Returns ``None`` at the end of the file: ``cw_getline`` reports -1 when the end was
+        reached with nothing kept, which includes a final stretch of nothing but ``\r``. The
+        end-of-file flag is set when the read ran into the end of the data, as ``feof`` is.
         """
         data, pos = self._data, self.pos
-        if pos >= len(data):
-            self.eof = True
-            return None
-        want = size - 1
-        limit = min(pos + want, len(data))
-        nl = data.find(b"\n", pos, limit)
+        nl = data.find(b"\n", pos)
         if nl != -1:
-            end = nl + 1
-        else:
-            end = limit
-        # Like C's feof(): set only when the read itself ran into the end. A line that ends with
-        # its newline exactly at the end of the data has not, so the next read still reports EOF.
-        if nl == -1 and len(data) - pos < want:
-            self.eof = True
-        self.pos = end
-        return data[pos:end].decode("latin-1")
+            self.pos = nl + 1
+            return data[pos:nl].replace(b"\r", b"").decode("latin-1")
+        self.pos = len(data)
+        self.eof = True
+        line = data[pos:].replace(b"\r", b"")
+        return line.decode("latin-1") if line else None
 
     def getpos(self) -> int:
         """``fgetpos``"""
@@ -69,84 +63,70 @@ class CFile:
         self.eof = False
 
 
-class StrTok:
-    """``cw_strtok``: split on commas, honouring a quote at the start and end of a field.
+class Tokenizer:
+    """``CWTokenizer``: split a line on commas, honouring a quote at the start of a field.
 
-    The C function keeps its position in a static variable; the position is
-    kept here on the instance. A new line is started by passing it in, and
-    ``None`` continues the line.
+    ``tok(line)`` is ``cw_tokenizer_init`` followed by the first ``cw_tokenizer_next``;
+    ``tok(None)`` is a further ``cw_tokenizer_next``. The C tokenizer writes a NUL over each
+    comma or closing quote that ends a field, so the line it was given afterwards reads as
+    the text up to the first such NUL; :meth:`line_text` gives that text, which the
+    "invalid record" warning prints.
     """
 
     def __init__(self) -> None:
         self._s = ""
-        self._next: int | None = None
+        self._at = 0
+        self._nul: int | None = None
 
     def __call__(self, line: str | None) -> str | None:
         if line is not None:
             nul = line.find("\0")
             self._s = line if nul < 0 else line[:nul]  # a C string ends at its first NUL
-            at = 0
-        elif self._next is not None:
-            at = self._next
-        else:
-            return None
-        s = self._s
+            self._at = 0
+            self._nul = None
+        return self.next()
+
+    def line_text(self) -> str:
+        """The line as the C sees it after tokenizing: up to the first NUL written so far"""
+        return self._s if self._nul is None else self._s[: self._nul]
+
+    def next(self) -> str | None:
+        """``cw_tokenizer_next``"""
+        s, at = self._s, self._at
         n = len(s)
-
         if at >= n:
-            self._next = None
             return None
-
-        while at < n and s[at] in " \t\n":
+        while at < n and s[at] in " \t":
             at += 1
         if at >= n:
-            self._next = None
+            self._at = at
             return None
 
         if s[at] == '"':
             at += 1
             start = at
-            q = s.find('"', at)
-            nl = s.find("\n", at)
-            cr = s.find("\r", at)
-            end = n
-            for cand in (q, nl, cr):
-                if cand != -1 and cand < end:
-                    end = cand
-            token = s[start:end]
-            # The original loop stopped at a quote, newline or CR alike and resumed just after it.
-            if end >= n:
-                self._next = None
+            quote = s.find('"', at)
+            if quote == -1:
+                token, at = s[start:], n
             else:
-                self._next = end + 1
-                if self._next < n and s[self._next] == ",":
-                    self._next += 1
+                token = s[start:quote]
+                if self._nul is None:
+                    self._nul = quote
+                at = quote + 1
+            if at < n and s[at] == ",":
+                at += 1
+            self._at = at
             return token
 
         start = at
         comma = s.find(",", at)
-        if comma != -1:
-            nl = s.find("\n", at, comma)
-            cr = s.find("\r", at, comma)
-            end = comma
-            if nl != -1:
-                end = nl
-            if cr != -1 and cr < end:
-                end = cr
-            token = s[start:end]
-            self._next = None if end >= n else end + 1
-            return token
-        else:
-            nl = s.find("\n", at)
-            cr = s.find("\r", at)
-            end = n
-            if nl != -1:
-                end = nl
-            if cr != -1 and cr < end:
-                end = cr
-            token = s[start:end]
-            self._next = None if end >= n else end + 1
-            return token
+        if comma == -1:
+            self._at = n
+            return s[start:]
+        if self._nul is None:
+            self._nul = comma
+        self._at = comma + 1
+        return s[start:comma]
 
 
 _INT_MIN, _INT_MAX = -(2**31), 2**31 - 1

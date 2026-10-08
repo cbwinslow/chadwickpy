@@ -84,7 +84,7 @@ def run_both(tmp_path: Path, tool: str, text: str, flags: list[str], name: str =
     folder.mkdir(exist_ok=True)
     (folder / name).write_bytes(text.encode("latin-1"))
     (folder / f"TEAM{YEAR}").write_text("")
-    args = ["-q", "-y", str(YEAR), *flags]
+    args = ["-Q", "-y", str(YEAR), *flags]
     c = subprocess.run([exe, *args, name], cwd=folder, capture_output=True, check=False)
     p = subprocess.run(
         [sys.executable, "-m", "chadwickpy", tool, *args, "-j", "1", name],
@@ -95,7 +95,7 @@ def run_both(tmp_path: Path, tool: str, text: str, flags: list[str], name: str =
 
 FLAGS = {
     "cwevent": ["-n", "-f", "0-96", "-x", "0-66"],
-    "cwgame": ["-n", "-f", "0-84", "-x", "0-96"],
+    "cwgame": ["-n", "-f", "0-85", "-x", "0-96"],
     "cwdaily": ["-n", "-f", "0-153"],
 }
 
@@ -128,12 +128,14 @@ def test_invalid_integers_warn_right_to_left(tmp_path: Path) -> None:
 
 @pytest.mark.parametrize("tool", ["cwgame", "cwdaily", "cwbox"])
 def test_a_fatal_error_the_c_reports_is_reported_once(tmp_path: Path, tool: str) -> None:
-    """`cannot find entry for player ... listed in dline` ends the run (exit 1); stderr must carry
-    the message once, as the C prints it, not a second time with a prefix."""
+    """A fatal box-score error ends the run (exit 1); stderr must carry the message once, as the C
+    prints it, not a second time with a prefix. A bare `stat,dline` has no team field, which
+    0.11.0 rejects before it looks for the player (it used to be `player '(null)' ... dline`)."""
     text = box_game_missing_player_field()
     c, p = run_both(tmp_path, tool, text, [] if tool == "cwbox" else FLAGS[tool], "g.EBR")
     assert (p.returncode, p.stdout, p.stderr) == (c.returncode, c.stdout, c.stderr)
-    assert b"(null)" in c.stderr
+    assert c.returncode == 1
+    assert c.stderr.count(b"invalid team -1 in dline record") == 1
 
 
 def test_a_player_removed_for_a_pinch_hitter_with_an_empty_id_still_counts_as_removed(

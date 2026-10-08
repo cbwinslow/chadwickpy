@@ -1,5 +1,5 @@
 {
-  "chadwick_version": "0.10.0",
+  "chadwick_version": "0.11.0",
   "fields": "0-96",
   "extended": "0-66",
   "files": {
@@ -7,31 +7,31 @@
       "year": 1952,
       "rows": 42,
       "fixture_sha256": "5799f64a88052b3a0920af962add07c08f6fb7c6ef0bd8674e549435f1f9cb9a",
-      "csv_sha256": "272044153c3c7e9eceb5fb6980155bd2501fb858d67f8f238b494dbd3c7f38af"
+      "csv_sha256": "4ff75ebb8e39d6ff6f48581859925d9e47afbff5ecb8243cc1c568324bdc7410"
     },
     "auto_runner.evt": {
       "year": 2020,
       "rows": 96,
       "fixture_sha256": "cffdb4b7373b1eabbec5725980dc2b656aff984b55e5a84b899acc0df96fa646",
-      "csv_sha256": "63c87f7d83476422197f992639cb2c4286573206f763724dd7decc31b43f76dd"
+      "csv_sha256": "1f2dd8491c7df1e3bd3404ca510e1805147148d85da6c71ec612d225b9295134"
     },
     "auto_runner_pr.evt": {
       "year": 2020,
       "rows": 100,
       "fixture_sha256": "5f7f4c234839a6dc24ebd6e4d5e3f03e5567a26df5cf4cc4b7aa5afc63768908",
-      "csv_sha256": "0f576ac5a864e2afc367db9a93ebae986bbc6d6129ce7b61de7b20f8c64fdd2d"
+      "csv_sha256": "93d2026a1efd4de7c3fe646fedb086359611dddca412c7687402e10f076cd53d"
     },
     "deduced.evt": {
       "year": 1915,
       "rows": 40,
       "fixture_sha256": "1f2fd833a8e06a27149d346ac2637be04b7c5c5dc28ecda430b5aa41938cab67",
-      "csv_sha256": "c93d4cf865eb2784be52fc17f96842c0e4bedb6633a8df90283549e8180c1cfb"
+      "csv_sha256": "ede3b483e0ed00469fb2d32ddf8e54a9e6ad201b1cd2444bdc7444e2fc15ebcf"
     },
     "ladj.evt": {
       "year": 1910,
       "rows": 73,
       "fixture_sha256": "64f3a546861840e1efdea25aaa150ab029b3cdc71566bb462ab30f998b4812f9",
-      "csv_sha256": "32eda8a0d2a66aa09e100324d9ce18b530f2eea0390c01aca729c6c8beb03770"
+      "csv_sha256": "8e702384c07a2a64bb73deb93d10e733beed762905e4952b6338fee9d2b1a61c"
     },
     "negro_league.evt": {
       "year": 1926,
@@ -49,7 +49,7 @@
       "year": 1909,
       "rows": 52,
       "fixture_sha256": "f42d29515fbda7435ecb8d728d6c81eb56a3c8ee8733b7010994dd5fbb13a6a5",
-      "csv_sha256": "4e1d9c5113e3f90ad9b912b35060d509d4dea301f795a79d53355c3f39a70345"
+      "csv_sha256": "573f5f3a0bdda30d6f7b4c3e59dea03bd9a8cfcd525cd9c123f8abb87040ec28"
     },
     "regular_1950.evt": {
       "year": 1950,

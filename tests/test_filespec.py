@@ -81,9 +81,9 @@ def test_a_wildcard_run_equals_naming_the_files(tmp_path, monkeypatch, tool):
         (tmp_path / f.name).write_bytes(f.read_bytes())
     make(tmp_path, "2007B.EVA", "2007A.EVA", "2007C.EVN")
     monkeypatch.chdir(tmp_path)
-    explicit = run(tool, ["-q", "-y", "2007", "2007A.EVA", "2007B.EVA", "2007C.EVN"])
+    explicit = run(tool, ["-Q", "-y", "2007", "2007A.EVA", "2007B.EVA", "2007C.EVN"])
     monkeypatch.setattr(cli, "_is_windows", lambda: True)
-    wild = run(tool, ["-q", "-y", "2007", "2007*.EV?"])
+    wild = run(tool, ["-Q", "-y", "2007", "2007*.EV?"])
     assert explicit[0] == wild[0] == 0
     assert explicit[1] and wild == explicit
 
@@ -93,5 +93,5 @@ def test_a_wildcard_with_no_match_processes_nothing_and_succeeds(tmp_path, monke
         (tmp_path / f.name).write_bytes(f.read_bytes())
     monkeypatch.chdir(tmp_path)
     monkeypatch.setattr(cli, "_is_windows", lambda: True)
-    status, out, err = run("cwevent", ["-q", "-y", "2007", "*.NOPE"])
+    status, out, err = run("cwevent", ["-Q", "-y", "2007", "*.NOPE"])
     assert (status, out, err) == (0, "", "")

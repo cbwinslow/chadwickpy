@@ -42,8 +42,8 @@ CASES: list[tuple[str, list[str]]] = [
     ("cwevent", ["-n"]),
     ("cwevent", ["-n", "-f", "0-96", "-x", "0-66"]),
     ("cwevent", ["-ft", "-f", "0-96", "-x", "0-66"]),
-    ("cwgame", ["-n", "-f", "0-84", "-x", "0-96"]),
-    ("cwgame", ["-ft", "-f", "0-84", "-x", "0-96"]),
+    ("cwgame", ["-n", "-f", "0-85", "-x", "0-96"]),
+    ("cwgame", ["-ft", "-f", "0-85", "-x", "0-96"]),
     ("cwbox", []),
     ("cwbox", ["-X"]),
     ("cwdaily", ["-n"]),
@@ -82,7 +82,7 @@ def one(
         for name, content in support.items():
             (work / name).write_bytes(content)
         for tool, args in CASES:
-            argv = ["-q", "-y", str(YEAR), *args, f"{YEAR}XXX.EVN"]
+            argv = ["-Q", "-y", str(YEAR), *args, f"{YEAR}XXX.EVN"]
             real = run([_real(tool), *argv], work)
             port_cmd = [sys.executable, "-m", "chadwickpy", tool, *argv]
             if cov:

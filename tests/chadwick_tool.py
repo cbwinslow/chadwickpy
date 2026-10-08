@@ -76,8 +76,10 @@ def build_sanitised(
         "-g",
         "-O0",
         "-w",
-        '-DVERSION="0.10.0"',
+        '-DVERSION="0.11.0"',
         "-DHAVE_STRUCT_TM_TM_GMTOFF",
+        "-fgnu89-inline",  # 0.11.0 cwevent.c/cwdaily.c use plain `inline` helpers; at -O0 under
+        # C99 semantics that emits no out-of-line copy and the link fails
         "-fsanitize=address,undefined",
     ]
     cmd += ["-I", str(SRC), "-I", str(SRC / "cwlib"), "-I", str(SRC / "cwtools")]
@@ -128,7 +130,7 @@ def run_filled(
             (work / name).write_bytes(content)
         env = {**os.environ, "ASAN_OPTIONS": f"detect_leaks=0:malloc_fill_byte={fill}"}
         run = subprocess.run(
-            [str(exe), "-q", "-y", year, *args, f"{year}XXX.EVN"],
+            [str(exe), "-Q", "-y", year, *args, f"{year}XXX.EVN"],
             cwd=work,
             capture_output=True,
             check=False,
@@ -155,7 +157,7 @@ def run_tool(
     args: list[str],
     support: dict[str, bytes] | None = None,
 ) -> tuple[int, bytes] | None:
-    """(exit status, stdout) of ``<tool> -q -y YEAR <args> <file>``, run in a scratch directory
+    """(exit status, stdout) of ``<tool> -Q -y YEAR <args> <file>``, run in a scratch directory
     with an empty team file (plus ``support`` files); ``None`` if the binary is not installed."""
     exe = real_tool(tool)
     if exe is None:
@@ -170,7 +172,7 @@ def run_tool(
         for name, content in (support or {}).items():
             (work / name).write_bytes(content)
         run = subprocess.run(
-            [exe, "-q", "-y", year, *args, f"{year}XXX.EVN"],
+            [exe, "-Q", "-y", year, *args, f"{year}XXX.EVN"],
             cwd=work,
             capture_output=True,
             check=False,

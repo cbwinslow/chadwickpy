@@ -4,7 +4,7 @@ description: Which of Chadwick's C functions chadwickpy ports, how that was chec
 
 # Port coverage matrix
 
-Checked against Chadwick commit `c685ab5` (the commit the parity tests use).
+Checked against Chadwick 0.11.0 (tag `v0.11.0`, the version the parity tests use). The port was first verified against the development commit `c685ab5` that preceded it (chadwickpy 0.3.0).
 
 ## Method
 
