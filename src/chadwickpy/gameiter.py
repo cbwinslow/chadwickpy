@@ -361,23 +361,29 @@ class State:
                 return i
         return -1
 
-    def player_position(self, team: int, player_id: str | None) -> int:
-        """``cw_gamestate_player_position``"""
+    def runner_position(self, team: int, player_id: str | None) -> int:
+        """``cw_gamestate_runner_position``: the position associated with a runner, without the
+        batted-around adjustment used for the batter's PH/PR statistics."""
         for i in range(1, 10):
             row = self.lineups[i][team]
             if row.player_id is not None and row.player_id == player_id:
                 if row.position > 10 and self.dh_slot[team] == i:
                     # PH for the DH is treated as the DH right away (code 10)
                     return 10
-                if row.position > 10 and not self.ph_flag:
-                    # PH/PR who bat again in the same inning get position 0
-                    return 0
                 return row.position
         # Pitcher last: the pitcher can bat even though the DH was in effect
         row = self.lineups[0][team]
         if row.player_id is not None and row.player_id == player_id:
             return row.position
         return -1
+
+    def player_position(self, team: int, player_id: str | None) -> int:
+        """``cw_gamestate_player_position``"""
+        position = self.runner_position(team, player_id)
+        if position > 10 and not self.ph_flag:
+            # PH/PR who bat again in the same inning get position 0
+            return 0
+        return position
 
     # -- responsibility (rule 10.18) --------------------------------------
 
@@ -639,6 +645,7 @@ def _copy_data(d: EventData) -> EventData:
         d.advance[:],
         d.rbi_flag[:],
         d.fc_flag[:],
+        d.primary_out_flag[:],
         d.muff_flag[:],
         d.play[:],
         d.sh_flag,
@@ -665,7 +672,7 @@ def _copy_data(d: EventData) -> EventData:
         d.touches[:],
         d.error_types[:],
         d.batted_ball_type,
-        d.hit_location,
+        hit_location=d.hit_location,  # inferred_batted_ball_type is not copied in C
     )
 
 

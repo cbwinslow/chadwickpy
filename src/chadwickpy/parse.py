@@ -58,6 +58,7 @@ class EventData:
     advance: list[int] = field(default_factory=lambda: [0] * 4)
     rbi_flag: list[int] = field(default_factory=lambda: [0] * 4)
     fc_flag: list[int] = field(default_factory=lambda: [0] * 4)
+    primary_out_flag: list[int] = field(default_factory=lambda: [0] * 4)
     muff_flag: list[int] = field(default_factory=lambda: [0] * 4)
     play: list[str] = field(default_factory=lambda: [""] * 4)
     sh_flag: int = 0
@@ -84,6 +85,7 @@ class EventData:
     touches: list[int] = field(default_factory=lambda: [0] * _TOUCHES)
     error_types: list[str] = field(default_factory=lambda: ["N"] * _ERRORS)
     batted_ball_type: str = " "
+    inferred_batted_ball_type: str = " "
     hit_location: str = ""
 
 
@@ -132,7 +134,7 @@ def _isdigit(c: str) -> bool:
 
 
 def _isfielder(c: str) -> bool:
-    return "1" <= c <= "9" or c == "?"
+    return "1" <= c <= "9"
 
 
 def _isalpha(c: str) -> bool:
@@ -146,17 +148,15 @@ class _Parser:
     """``CWParserState`` plus the cursor primitives."""
 
     def __init__(self, text: str) -> None:
-        s = (
-            text.upper()
-            if text.isascii()
-            else "".join(c.upper() if c < "\x80" else c for c in text)
-        )
+        # Preprocessing: uppercase (ASCII only, like the C locale toupper) and strip the
+        # symbols '#', '!' and '?', which have no semantic meaning for parsing.
+        s = "".join(c.upper() if c < "\x80" else c for c in text if c not in "#!?")
         # Preprocessing to turn SBH and CSH strings into SB4 and CS4
         i = s.find("SBH")
         if i >= 0:
             s = s[: i + 2] + "4" + s[i + 3 :]
         i = s.find("CSH")
-        if i >= 0 and "FCSH" not in s:
+        if i >= 0:
             s = s[: i + 2] + "4" + s[i + 3 :]
         self.s = s
         self.sym = s[0] if s else NUL
@@ -180,15 +180,9 @@ class _Parser:
         self._tok[at] = ord(ch)
 
     def nextsym(self) -> str:
-        if self.pos > len(self.s):
-            self.sym = NUL
-        else:
-            # '#' and '!' (uncertain / great play) are ignored inside play text
-            while True:
-                self.sym = self.s[self.pos] if self.pos < len(self.s) else NUL
-                self.pos += 1
-                if self.sym not in "#!":
-                    break
+        if self.sym != NUL:
+            self.sym = self.s[self.pos] if self.pos < len(self.s) else NUL
+            self.pos += 1
         return self.sym
 
     def peek(self) -> str:
@@ -253,13 +247,12 @@ def _fielding_credit(p: _Parser, e: EventData, prev: str) -> int:
 
     while True:
         p.nextsym()
-        if "1" <= p.sym <= "9" or p.sym == "?":
+        if "1" <= p.sym <= "9":
             if _isdigit(last):
                 assists.append(ord(last) - ord("0"))
                 _touch(e, ord(last) - ord("0"))
-            if p.sym != "?":
-                p.put(n, p.sym)
-                n += 1
+            p.put(n, p.sym)
+            n += 1
             last = p.sym
         elif p.sym == "E":
             if _isdigit(last):
@@ -332,8 +325,12 @@ def _advance_modifier(p: _Parser, e: EventData, safe: int, base_from: int, base_
                 for i in range(base_from, -1, -1):
                     e.rbi_flag[i] = -1
         elif base_from == 0 and e.event_type == Ev.STRIKEOUT:
-            # batter put out listed explicitly in advancement
-            _drop_batter_putout(e)
+            # Batter put out listed explicitly in advancement.  If an earlier modifier made
+            # the batter safe, the implied catcher putout has already been removed; this
+            # credit is a subsequent, actual putout (as in K+WP.BX3(E2/TH)(2)).
+            if not safe:
+                _drop_batter_putout(e)
+            e.advance[base_from] = 0
 
         if p.token[:1] != "E":
             _set_play(e, base_from, p.token)
@@ -381,6 +378,13 @@ def _advance_modifier(p: _Parser, e: EventData, safe: int, base_from: int, base_
                 p.nextsym()
         elif t in ("THH", "INT"):
             pass
+        elif t == "SB":
+            # A SB has been awarded once (in 2025) on a BK primary event, making stolen
+            # bases in the secondary event grammatically legal
+            if 1 <= base_from <= 3:
+                e.sb_flag[base_from] = 1
+            if "2" <= p.sym <= "4" or p.sym == "H":
+                p.nextsym()
         else:
             return 0
 
@@ -428,82 +432,90 @@ def _trajectory_or_location(e: EventData, flag: str) -> None:
         _location(e, flag[2:] if bunt else flag[1:], bunt)
 
 
+def _apply_event_flag(e: EventData, flag: str) -> None:
+    """``cw_apply_event_flag``: process a single flag (with its slash) from a play string.
+
+    Flags that state a trajectory outright (/F, /G, /BP, GDP, a location-trajectory code like
+    F8) set ``batted_ball_type`` directly.  Flags that merely assume one (/SF, /FO, /IF) set
+    ``inferred_batted_ball_type``, which ``_sanity_check`` applies only if nothing else in the
+    play string was explicit about the trajectory.
+    """
+    if flag == "/SH":
+        e.sh_flag = 1
+        e.bunt_flag = 1
+    elif flag == "/SF":
+        e.sf_flag = 1
+        e.inferred_batted_ball_type = "F"
+    elif flag == "/DP":
+        e.dp_flag = 1
+    elif flag == "/GDP":
+        e.dp_flag = 1
+        e.gdp_flag = 1
+        e.batted_ball_type = "G"
+    elif flag == "/LDP":
+        e.dp_flag = 1
+        e.batted_ball_type = "L"
+    elif flag == "/FDP":
+        e.dp_flag = 1
+        e.batted_ball_type = "F"
+    elif flag == "/BGDP":
+        e.bunt_flag = 1
+        e.dp_flag = 1
+        e.gdp_flag = 1
+        e.batted_ball_type = "G"
+    elif flag == "/BPDP":
+        e.bunt_flag = 1
+        e.dp_flag = 1
+        e.batted_ball_type = "P"
+    elif flag == "/BFDP":
+        # interpreted as bunt-foul double play
+        e.bunt_flag = 1
+        e.dp_flag = 1
+        e.batted_ball_type = "P"
+        e.foul_flag = 1
+    elif flag == "/TP":
+        e.tp_flag = 1
+    elif flag == "/GTP":
+        e.tp_flag = 1
+        e.batted_ball_type = "G"
+    elif flag == "/LTP":
+        e.tp_flag = 1
+        e.batted_ball_type = "L"
+    elif flag == "/FL":
+        e.foul_flag = 1
+    elif flag == "/FO":
+        e.force_flag = 1
+        e.inferred_batted_ball_type = "G"
+    elif flag[1:] in _THROW and e.event_type in (Ev.ERROR, Ev.PICKOFFERROR):
+        e.error_types[0] = "T"
+    elif flag == "/B":
+        e.bunt_flag = 1
+    elif flag in ("/BG", "/BP", "/BF", "/BL"):
+        e.bunt_flag = 1
+        e.batted_ball_type = flag[2]
+    elif flag in ("/F", "/G", "/L"):
+        e.batted_ball_type = flag[1]
+    elif flag == "/P":
+        e.batted_ball_type = "P"
+    elif flag == "/IF":
+        e.inferred_batted_ball_type = "P"  # infield fly is assumed to be a popup
+    elif len(flag) >= 3:
+        _trajectory_or_location(e, flag)
+    elif flag[1:] in _LOCATIONS:
+        e.hit_location = flag[1:]
+
+
 def _flags(p: _Parser, e: EventData) -> None:
     while True:
         flag = "/"
         while True:
             p.nextsym()
-            if p.sym not in "/.#!+-" and p.sym != NUL:
+            if p.sym not in "/.+-" and p.sym != NUL:
                 flag += p.sym
-            if p.sym in "/.#!+-" or p.sym == NUL:
+            if p.sym in "/.+-" or p.sym == NUL:
                 break
 
-        if flag in ("/SH", "/SAC"):
-            e.sh_flag = 1
-            e.bunt_flag = 1
-        elif flag == "/SF":
-            e.sf_flag = 1
-            # a /SF is a fly ball unless E4/SF style plays say otherwise
-            if e.batted_ball_type == " " or (
-                e.event_type == Ev.ERROR and e.batted_ball_type == "G"
-            ):
-                e.batted_ball_type = "F"
-        elif flag == "/DP":
-            e.dp_flag = 1
-        elif flag == "/GDP":
-            e.dp_flag = 1
-            e.gdp_flag = 1
-            e.batted_ball_type = "G"
-        elif flag == "/LDP":
-            e.dp_flag = 1
-            e.batted_ball_type = "L"
-        elif flag == "/FDP":
-            e.dp_flag = 1
-            e.batted_ball_type = "F"
-        elif flag == "/BGDP":
-            e.bunt_flag = 1
-            e.dp_flag = 1
-            e.gdp_flag = 1
-            e.batted_ball_type = "G"
-        elif flag == "/BPDP":
-            e.bunt_flag = 1
-            e.dp_flag = 1
-            e.batted_ball_type = "P"
-        elif flag == "/BFDP":
-            # interpreted as bunt-foul double play
-            e.bunt_flag = 1
-            e.dp_flag = 1
-            e.batted_ball_type = "P"
-            e.foul_flag = 1
-        elif flag == "/TP":
-            e.tp_flag = 1
-        elif flag == "/GTP":
-            e.tp_flag = 1
-            e.batted_ball_type = "G"
-        elif flag == "/LTP":
-            e.tp_flag = 1
-            e.batted_ball_type = "L"
-        elif flag == "/FL":
-            e.foul_flag = 1
-        elif flag == "/FO":
-            e.force_flag = 1
-            if e.batted_ball_type == " ":
-                e.batted_ball_type = "G"
-        elif flag[1:] in _THROW and e.event_type in (Ev.ERROR, Ev.PICKOFFERROR):
-            e.error_types[0] = "T"
-        elif flag == "/B":
-            e.bunt_flag = 1
-        elif flag in ("/BG", "/BP", "/BF", "/BL"):
-            e.bunt_flag = 1
-            e.batted_ball_type = flag[2]
-        elif flag in ("/F", "/G", "/L"):
-            e.batted_ball_type = flag[1]
-        elif flag in ("/P", "/IF"):
-            e.batted_ball_type = "P"  # infield fly is assumed to be a popup
-        elif len(flag) >= 3:
-            _trajectory_or_location(e, flag)
-        elif flag[1:] in _LOCATIONS:
-            e.hit_location = flag[1:]
+        _apply_event_flag(e, flag)
 
         if p.sym == "." or p.sym == NUL:
             break
@@ -556,6 +568,12 @@ def _stolen_base(p: _Parser, e: EventData, flags: int) -> int:
         elif p.token == "CS":
             # Chadwick extension: early history has both SB and CS on one play
             _caught_stealing(p, e, 0)
+        elif p.token == "POCS":
+            _pickoff_caught_stealing(p, e, 0)
+        elif p.token == "POSB":
+            _pickoff_stolen_base(p, e, 0)
+        elif p.token == "PO":
+            _pickoff(p, e, 0)
         else:
             return 0
 
@@ -621,6 +639,12 @@ def _caught_stealing(p: _Parser, e: EventData, flags: int) -> int:
             _caught_stealing(p, e, 0)
         elif p.token == "SB":
             _stolen_base(p, e, 0)
+        elif p.token == "POCS":
+            _pickoff_caught_stealing(p, e, 0)
+        elif p.token == "POSB":
+            _pickoff_stolen_base(p, e, 0)
+        elif p.token == "PO":
+            _pickoff(p, e, 0)
         else:
             return 0
 
@@ -645,10 +669,8 @@ def _safe_on_error(p: _Parser, e: EventData, flags: int) -> int:
     e.error_types[e.num_errors] = "F"
     e.num_errors += 1
     e.fielded_by = n
-    e.batted_ball_type = "G" if p.sym <= "6" else "F"
+    e.inferred_batted_ball_type = "G" if p.sym <= "6" else "F"
     p.nextsym()
-    if p.sym == "?":  # "En?" for a really bad play
-        p.nextsym()
     if flags and p.sym == "/":
         _flags(p, e)
     return 1
@@ -656,11 +678,9 @@ def _safe_on_error(p: _Parser, e: EventData, flags: int) -> int:
 
 def _fielders_choice(p: _Parser, e: EventData, flags: int) -> int:
     e.advance[0] = 1
-    e.batted_ball_type = "G"
+    e.inferred_batted_ball_type = "G"
     if "1" <= p.sym <= "9":
         e.fielded_by = ord(p.sym) - ord("0")
-        p.nextsym()
-    elif p.sym == "?":
         p.nextsym()
     if flags and p.sym == "/":
         _flags(p, e)
@@ -699,13 +719,31 @@ def _generic_out(p: _Parser, e: EventData, flags: int) -> int:
     last = " "  # fielder of the previous putout, for 54(1)3/GDP
     force_play = -1
 
-    if p.sym != "?" and (p.sym != "9" or p.peek() != "9"):
+    if p.sym != "9" or p.peek() != "9":
         # June 2020: generic outs starting with 99 give fielded_by = 0
         e.fielded_by = ord(p.sym) - ord("0")
     e.advance[0] = 1
 
     while _isfielder(p.sym):
+        putouts_before = e.num_putouts
+        assists_before = e.num_assists
+        touches_before = e.num_touches
+
         safe = _fielding_credit(p, e, last)
+
+        if p.token == "99":
+            # "99" is the placeholder for a wholly unknown fielding credit.  Roll back
+            # whatever _fielding_credit recorded for it and leave the batted ball type
+            # uninferred.
+            for i in range(putouts_before, e.num_putouts):
+                e.putouts[i] = 0
+            for i in range(assists_before, e.num_assists):
+                e.assists[i] = 0
+            for i in range(touches_before, e.num_touches):
+                e.touches[i] = 0
+            e.num_putouts = putouts_before
+            e.num_assists = assists_before
+            e.num_touches = touches_before
 
         if p.sym == "(":
             base = _out_base(p)
@@ -717,17 +755,19 @@ def _generic_out(p: _Parser, e: EventData, flags: int) -> int:
             if safe:
                 e.muff_flag[base] = 1
             e.fc_flag[base] = 1
-            if e.batted_ball_type == " ":
+            e.primary_out_flag[base] = 1
+            if e.inferred_batted_ball_type == " " and p.token != "99":
                 if len(p.token) > 1 or base > 0:
                     # more than one fielder implies a ground ball; so does
                     # getting the first out on a non-batter
-                    e.batted_ball_type = "G"
+                    e.inferred_batted_ball_type = "G"
                 elif len(p.token) == 1 and base == 0:
-                    e.batted_ball_type = "F"
+                    e.inferred_batted_ball_type = "F"
             _set_play(e, base, p.token)
             last = p.token[-1]
         else:
-            e.batted_ball_type = "G" if len(p.token) > 1 or last != " " else "F"
+            if p.token != "99":
+                e.inferred_batted_ball_type = "G" if len(p.token) > 1 or last != " " else "F"
             _set_play(e, 0, p.token)
             e.advance[0] = 1 if safe else 0
             if safe:
@@ -745,6 +785,7 @@ def _generic_out(p: _Parser, e: EventData, flags: int) -> int:
     if force_play == 0 and "/GDP" not in p.s:
         for i in range(1, 4):
             e.fc_flag[i] = 0
+            e.primary_out_flag[i] = 0
     return 1
 
 
@@ -756,40 +797,29 @@ def _hit_by_pitch(p: _Parser, e: EventData, flags: int) -> int:
 
 
 def _interference(p: _Parser, e: EventData, flags: int) -> int:
+    """An explicit fielding credit (C/En or C/mEn) must be the first flag; the rest use the
+    standard flag parser."""
     e.advance[0] = 1
 
-    while p.sym == "/":
-        _flag(p)
-        t = p.token
-        if t[:1] == "E" and e.num_errors > 0:
-            return 0
-        if t in ("E1", "E2", "E3", "E4", "E6"):
-            e.errors[e.num_errors] = int(t[1])
-            e.num_errors += 1
-        elif t == "4E1":
-            e.errors[e.num_errors] = 1
-            e.num_errors += 1
-            e.assists[e.num_assists] = 4
-            e.num_assists += 1
-        elif t == "INT":
-            pass
-        elif t == "G":
-            e.batted_ball_type = "G"  # interference can also occur on a batted ball
-        elif len(t) >= 2:
-            bunt = t[0] == "B"
-            traj = t[1] if bunt else t[0]
-            if traj in "GFPL":
-                if _location(e, t[2:] if bunt else t[1:], bunt):
-                    e.batted_ball_type = traj
-            else:
-                _location(e, t[1:] if bunt else t, bunt)
-        elif t in _LOCATIONS:
-            e.hit_location = t
+    if p.sym != "/":
+        return 0
 
-    if e.num_errors == 0:
-        e.errors[e.num_errors] = 2
+    _flag(p)
+    t = p.token
+    if len(t) == 2 and t[0] == "E" and "1" <= t[1] <= "9":
+        e.errors[e.num_errors] = int(t[1])
         e.num_errors += 1
+    elif len(t) == 3 and "1" <= t[0] <= "9" and t[1] == "E" and "1" <= t[2] <= "9":
+        e.assists[e.num_assists] = int(t[0])
+        e.num_assists += 1
+        e.errors[e.num_errors] = int(t[2])
+        e.num_errors += 1
+    else:
+        return 0
     e.error_types[0] = "F"
+
+    if flags and p.sym == "/":
+        _flags(p, e)
     return 1
 
 
@@ -807,6 +837,8 @@ def _other_advance(p: _Parser, e: EventData, flags: int) -> int:
             pass
         elif t == "TP":
             e.tp_flag = 1
+        elif t in _THROW:
+            pass  # throw notation on the primary event; no action required
         elif t[:1] == "R":
             pass  # relay notation
         else:
@@ -1037,6 +1069,10 @@ def _runner_advance(p: _Parser, e: EventData) -> int:
         p.nextsym()
         if not _advance_modifier(p, e, safe, base_from, base_to):
             return 0
+        # A modifier can change an attempted out into a safe advance.  Carry that result
+        # into a following modifier so an explicit later out is not confused with the
+        # strikeout's implied catcher putout.
+        safe = 1 if e.advance[base_from] != 0 else 0
     return 1
 
 
@@ -1052,6 +1088,12 @@ def _advancement(p: _Parser, e: EventData) -> int:
 
 def _sanity_check(e: EventData) -> None:
     """``cw_parse_sanity_check``"""
+    # An explicit trajectory (from a flag like /F, /BG, or a location code like F8) always takes
+    # precedence over one merely inferred from fielding credits or from flags such as /SF, /FO,
+    # /IF that assume rather than state a trajectory.
+    if e.batted_ball_type == " ":
+        e.batted_ball_type = e.inferred_batted_ball_type
+
     default_advance: dict[int, int] = {Ev.SINGLE: 1, Ev.DOUBLE: 2, Ev.TRIPLE: 3, Ev.HOMERUN: 4}
     if e.event_type in default_advance and e.advance[0] == 0 and e.play[0] == "":
         e.advance[0] = default_advance[e.event_type]
@@ -1092,7 +1134,7 @@ def _sanity_check(e: EventData) -> None:
             e.num_assists = 0
 
     # default batted ball types from the fielding credit
-    if e.event_type == Ev.GENERICOUT:
+    if e.event_type == Ev.GENERICOUT and e.play[0] != "99":
         if (
             len(e.play[0]) == 1
             and not e.dp_flag

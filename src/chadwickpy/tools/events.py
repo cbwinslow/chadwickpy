@@ -262,7 +262,7 @@ def _run_position(base: int) -> Field:
         st = c.gi.state
         if not st.base_occupied(base):
             return "0"
-        return str(st.player_position(st.batting_team, st.runners[base].runner))
+        return str(st.runner_position(st.batting_team, st.runners[base].runner))
 
     return f
 
@@ -288,7 +288,10 @@ def _pitches(criterion: frozenset[str]) -> Field:
 def _force(base: int) -> Field:
     def f(c: _Ctx) -> str:
         d = c.gi.data
-        return _tf(d.fc_flag[base] and (d.gdp_flag or d.force_flag))
+        return _tf(
+            d.fc_flag[base]
+            and (d.gdp_flag or (d.dp_flag and d.primary_out_flag[base]) or d.force_flag)
+        )
 
     return f
 
