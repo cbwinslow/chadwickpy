@@ -42,6 +42,7 @@ from chadwickpy.box import (  # noqa: E402
     put_fielding,
     set_position_slot,
 )
+from chadwickpy.file import ReportedError  # noqa: E402
 from chadwickpy.game import read_games  # noqa: E402
 from chadwickpy.tools import cwbox  # noqa: E402
 
@@ -303,15 +304,16 @@ def test_cwbox_same(tmp_path, name):
 
 def test_position_out_of_range_in_printer():
     """``positions[code]`` of the C table is read with a code the lineup checks of ``cwbox``
-    (``cw_game_lint``, the substitution checks) never let through. Only a box score ``dline``
-    can carry one: the C crashes on box-score-only text output anyway (ADR-003), the port
-    refuses the position that is outside its table."""
+    (``cw_game_lint``, the substitution checks) never let through, and Chadwick 0.11.0 now
+    validates a box score ``dline`` position (1-9) before it is stored (ce175ee), so the printer's
+    table is only reached with a legal code. The port refuses a position outside its table anyway;
+    a ``dline`` with one is the validation error."""
     assert cwbox._position(-1) == ""
     assert cwbox._position(10) == "dh"
     with pytest.raises(ValueError, match="position 13 out of range"):
         cwbox._position(13)
     games = list(read_games(box_file("stat,dline,v1,0,1,-2,3,1,0,0,0,0,0\n").encode("latin-1")))
-    with pytest.raises(ValueError, match="position -2 out of range"):
+    with pytest.raises(ReportedError, match="invalid position -2 in dline record"):
         cwbox.process_game(games[0], None, None)
 
 

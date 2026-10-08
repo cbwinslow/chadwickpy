@@ -38,6 +38,8 @@ _T = TypeVar("_T")
 
 LINESCORE_INNINGS = 50
 NUM_POSITIONS = 40
+POS_PH = 11  # DWARE_POS_PH
+POS_PR = 12  # DWARE_POS_PR
 EVENT_PLAYERS = 20
 
 
@@ -963,6 +965,33 @@ def iterate_game(box: Boxscore, game: Game) -> None:
         box.errors[t] = state.errors[t]
 
 
+def _validate_boxscore_value(
+    game: Game, record: str, field: str, value: int, low: int, high: int
+) -> None:
+    """``cw_box_validate_boxscore_value``: the C prints the error and ``exit(1)``"""
+    if value < low or value > high:
+        msg = (
+            f"ERROR: In {game.game_id}, invalid {field} {value} in {record} record "
+            f"(valid values are {low}-{high})."
+        )
+        log.error(msg)
+        raise ReportedError(msg)
+
+
+def _prepend_position(player: BoxPlayer, position: int) -> None:
+    """``cw_box_prepend_position``: put ``position`` first in the player's position list"""
+    capacity = NUM_POSITIONS  # ``sizeof(player->positions) / sizeof(int)``
+    if player.num_positions > 0 and player.positions[0] == position:
+        return
+    i = player.num_positions if player.num_positions < capacity else capacity - 1
+    while i > 0:
+        player.positions[i] = player.positions[i - 1]
+        i -= 1
+    player.positions[0] = position
+    if player.num_positions < capacity:
+        player.num_positions += 1
+
+
 def process_boxscore_file(box: Boxscore, game: Game) -> None:  # noqa: C901, PLR0912, PLR0915
     """``cw_box_process_boxscore_file``
 
@@ -978,9 +1007,20 @@ def process_boxscore_file(box: Boxscore, game: Game) -> None:  # noqa: C901, PLR
         if kind == "bline":
             slot = _item_int(stat, 3)
             team = _item_int(stat, 2)
-            _slot_team(slot, team)
+            seq = _item_int(stat, 4)
+            _validate_boxscore_value(game, "bline", "team", team, 0, 1)
+            _validate_boxscore_value(game, "bline", "slot", slot, 0, 9)
 
-            if _item_int(stat, 4) == 1:
+            # Some generated boxscore event files give every slot-zero bline a sequence number of
+            # zero, including the starting pitcher: match the player already entered for the same
+            # team and batting-order slot.
+            existing = box.slots[slot][team]
+            if seq == 1 or (
+                slot == 0
+                and seq == 0
+                and existing is not None
+                and existing.player_id == _deref(_stat_id(stat))
+            ):
                 # Record for starter
                 player = _deref(get_starter(box, team, slot))
             else:
@@ -1039,7 +1079,7 @@ def process_boxscore_file(box: Boxscore, game: Game) -> None:  # noqa: C901, PLR
         elif kind == "pline":
             team = _item_int(stat, 2)
             seq = _item_int(stat, 3)
-            _slot_team(0, team)
+            _validate_boxscore_value(game, "pline", "team", team, 0, 1)
 
             if seq == 1:
                 # Record for starter
@@ -1082,6 +1122,9 @@ def process_boxscore_file(box: Boxscore, game: Game) -> None:  # noqa: C901, PLR
             team = _item_int(stat, 2)
             seq = _item_int(stat, 3)
             pos = _item_int(stat, 4)
+            _validate_boxscore_value(game, "dline", "team", team, 0, 1)
+            _validate_boxscore_value(game, "dline", "sequence", seq, 1, 40)
+            _validate_boxscore_value(game, "dline", "position", pos, 1, 9)
             found = find_player(box, _stat_id(stat), pos != 1)
             if found is None:
                 player_name = _c_str(_stat_id(stat))
@@ -1102,7 +1145,6 @@ def process_boxscore_file(box: Boxscore, game: Game) -> None:  # noqa: C901, PLR
             f.po = _item_int(stat, 6)
             f.a = _item_int(stat, 7)
             f.e = _item_int(stat, 8)
-            _slot_team(0, team)
             box.errors[team] += f.e
             f.dp = _item_int(stat, 9)
             f.tp = _item_int(stat, 10)
@@ -1111,6 +1153,8 @@ def process_boxscore_file(box: Boxscore, game: Game) -> None:  # noqa: C901, PLR
             f.bf = -1
             f.xi = -1
         elif kind in ("phline", "prline"):
+            team = _item_int(stat, 3)
+            _validate_boxscore_value(game, kind, "team", team, 0, 1)
             found = find_player(box, _stat_id(stat), True)
             if found is None:
                 player_name = _c_str(_stat_id(stat))
@@ -1122,11 +1166,13 @@ def process_boxscore_file(box: Boxscore, game: Game) -> None:  # noqa: C901, PLR
                 raise ReportedError(msg)
             if kind == "phline":
                 found.ph_inn = _item_int(stat, 2)
+                _prepend_position(found, POS_PH)
             else:
                 found.pr_inn = _item_int(stat, 2)
+                _prepend_position(found, POS_PR)
         elif kind == "tline":
             team = _item_int(stat, 1)
-            _slot_team(0, team)
+            _validate_boxscore_value(game, "tline", "team", team, 0, 1)
             box.lob[team] = _item_int(stat, 2)
             box.er[team] = _item_int(stat, 3)
             box.dp[team] = _item_int(stat, 4)
@@ -1134,16 +1180,18 @@ def process_boxscore_file(box: Boxscore, game: Game) -> None:  # noqa: C901, PLR
 
     for line in game.line:
         team = _item_int(line, 0)
-        _slot_team(0, team)
+        _validate_boxscore_value(game, "line", "team", team, 0, 1)
         for i in range(1, len(line)):
             box._inning_row(i)[team] = _item_int(line, i)
 
     for stat in game.evdata:
         if stat[0] in ("dpline", "tpline"):
+            team = _item_int(stat, 1)
+            _validate_boxscore_value(game, f"{stat[0]} event", "team", team, 0, 1)
             event = add_event(
                 box.dp_list if stat[0] == "dpline" else box.tp_list,
                 -1,
-                1 - _item_int(stat, 1),
+                1 - team,
             )
             for i in range(2, len(stat)):
                 _set_player(event, i - 2, _deref(stat[i]))

@@ -95,6 +95,17 @@ def box_file(extra: str = "") -> str:
     return header() + "".join(lineup("v", 0, NORMAL)) + "".join(lineup("h", 1, NORMAL)) + extra
 
 
+def dh_box_file(extra: str = "") -> str:
+    """A boxscore-only file whose visitors have a DH and a starting pitcher in slot 0."""
+    return (
+        header({"usedh": "true"})
+        + "".join(lineup("v", 0, [8, 9, 7, 5, 2, 3, 4, 6, 10]))
+        + 'start,vp,"VP",0,0,1\n'
+        + "".join(lineup("h", 1, NORMAL))
+        + extra
+    )
+
+
 def sub(player: str, team: int, slot: int, pos: int) -> str:
     return f'sub,{player},"{player.upper()}",{team},{slot},{pos}\n'
 
@@ -132,7 +143,12 @@ BOX_SAME = {
         plays=[THREE_UP[0], sub("vp", 0, 9, 1), *THREE_UP[1:]],
     ),
     # a stat line of a player not in the box score is only legal for the phline/prline kinds
-    "phline_prline": box_file("stat,phline,v2,7\nstat,prline,v3,5\n"),
+    # (0.11.0: the team is validated, so the lines need a team; phline/prline also put PH/PR in
+    # the player's position list, a036277)
+    "phline_prline": box_file("stat,phline,v2,7,0\nstat,prline,v3,5,0\n"),
+    # a bline whose slot-zero sequence is 0 for the starting pitcher (e1f1f30)
+    "bline_zero_seq_starter": dh_box_file("stat,bline,vp,0,0,0,3,0,0\n"),
+    "bline_zero_seq_starter_other_id": dh_box_file("stat,bline,xx,0,0,0,3,0,0\n"),
     # dline with a sequence beyond the entries so far, at a legal position
     "dline_ok": box_file("stat,dline,v1,0,1,8,3,1,0,0,0,0,0\n"),
     # a double-play line of 20 players (the C array holds exactly 20)
@@ -173,6 +189,25 @@ BOX_FAIL = {
     "sub_pitcher_no_pitcher_h": game(
         home=NO_PITCHER, plays=["play,1,0,v1,00,,NP\n", sub("hp", 1, 3, 1), THREE_UP[1]]
     ),
+    # Chadwick 0.11.0 validates team, slot and position in a boxscore event file (ce175ee): a team
+    # index of 2 or a dline sequence of 0 or 41 used to index outside the arrays (undefined
+    # behaviour); they are now a reported error and exit(1)
+    "dline_team_2": box_file("stat,dline,v1,2,1,8,3,1,0,0,0,0,0\n"),
+    "dline_seq_0": box_file("stat,dline,v1,0,0,8,3,1,0,0,0,0,0\n"),
+    "dline_seq_41": box_file("stat,dline,v1,0,41,8,3,1,0,0,0,0,0\n"),
+    "tline_team_2": box_file("stat,tline,2,3,1,0,0\n"),
+    "line_team_2": box_file("line,2,1,0,2\n"),
+    "pline_team_2": box_file("stat,pline,v1,2,1,3,10,0,0\n"),
+    "bline_team_2": box_file("stat,bline,v1,2,1,1,4,0,0\n"),
+    "bline_slot_10": box_file("stat,bline,v1,0,10,1,4,0,0\n"),
+    "bline_slot_neg": box_file("stat,bline,v1,0,-1,1,4,0,0\n"),
+    # ... a missing team reads as -1
+    "phline_no_team": box_file("stat,phline,v2,7\n"),
+    "dline_pos_0": box_file("stat,dline,v1,0,1,0,3,1,0,0,0,0,0\n"),
+    "phline_team_2": box_file("stat,phline,v2,7,2\n"),
+    "prline_team_neg": box_file("stat,prline,v3,5,-1\n"),
+    "dpline_team_2": box_file("event,dpline,2,a,b\n"),
+    "tpline_team_2": box_file("event,tpline,2,a,b,c\n"),
     # box-score lines naming players that are not in the game
     "dline_unknown": box_file("stat,dline,zz,0,1,5,3,1,0,0,0,0,0\n"),
     "dline_pos_10": box_file("stat,dline,v1,0,1,10,3,1,0,0,0,0,0\n"),
@@ -192,12 +227,6 @@ BOX_UB = {
     ),
     # event->players[] holds 20 pointers
     "dpline_23": box_file("event,dpline,0," + ",".join(f"p{i}" for i in range(23)) + "\n"),
-    # a team index of 2 and a slot sequence of 0 or 41 index outside the arrays
-    "dline_team_2": box_file("stat,dline,v1,2,1,8,3,1,0,0,0,0,0\n"),
-    "dline_seq_0": box_file("stat,dline,v1,0,0,8,3,1,0,0,0,0,0\n"),
-    "dline_seq_41": box_file("stat,dline,v1,0,41,8,3,1,0,0,0,0,0\n"),
-    "tline_team_2": box_file("stat,tline,2,3,1,0,0\n"),
-    "line_team_2": box_file("line,2,1,0,2\n"),
     # linescore[50][2]: the 51st inning is outside
     "line_55": box_file("line,0," + ",".join(["1"] * 55) + "\n"),
     # a negative inning on a later play: linescore[-2]
@@ -259,12 +288,14 @@ CLI_FAIL = {
     # no date: the C reads NULL; an unparsable date aborts it
     "no_date": game().replace("info,date,2020/01/01\n", ""),
     "date_dashes": game(info={"date": "2020-01-01"}),
-    "date_month_only": game(info={"date": "2020/01"}),
     "date_unreadable": game(info={"date": "abc"}),
     "no_number_text": game().replace("info,number,0\n", ""),
 }
 
 CLI_UB = {
+    # sscanf("%d/%d/%d") stops after the month, so cwtools_game_in_range tests an uninitialised
+    # day (0.11.0: the real cwbox now exits 0 with no output; the 0.10 build crashed)
+    "date_month_only": game(info={"date": "2020/01"}),
     # an empty timeofgame makes the C read an uninitialised number
     "timeofgame_empty": game(info={"timeofgame": '""'}),
 }
