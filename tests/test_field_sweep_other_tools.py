@@ -29,7 +29,7 @@ from chadwickpy.tools.cli import TOOLS  # noqa: E402
 FIELD_COUNTS = {
     "cwgame": (85, 97),
     "cwdaily": (154, 0),
-    "cwsub": (25, 0),
+    "cwsub": (26, 0),
     "cwcomment": (10, 0),
 }
 FORMATS = {"ascii": ["-n"], "fixed": ["-ft"]}
