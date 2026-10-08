@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.4.0](https://github.com/cbwinslow/chadwickpy/compare/v0.3.0...v0.4.0) (2026-10-08)
+
+
+### ⚠ BREAKING CHANGES
+
+* follow Chadwick 0.11.0: the quiet switch is -Q (-q is rejected like the C tools), new -D dir option
+
+### Features
+
+* cwgame date formats and field 84, cwsub COUNT_TX, box-score validation and PH/PR positions, new record reader and tokenizer ([2a85b89](https://github.com/cbwinslow/chadwickpy/commit/2a85b899108c5ab41ca42a3fcd0c315a1d63e8ef))
+* follow Chadwick 0.11.0: the quiet switch is -Q (-q is rejected like the C tools), new -D dir option ([2a85b89](https://github.com/cbwinslow/chadwickpy/commit/2a85b899108c5ab41ca42a3fcd0c315a1d63e8ef))
+* port the Chadwick 0.11.0 play parser changes (C/ events, SB in advances, pickoff after CS, /TH on OA, no ? fielder, 99 plays, inferred batted ball) ([2a85b89](https://github.com/cbwinslow/chadwickpy/commit/2a85b899108c5ab41ca42a3fcd0c315a1d63e8ef))
+
+
+### Bug Fixes
+
+* cwevent and the other tools print an empty string for a missing value as Chadwick 0.11.0 does; over-long player ids are cut to 49 characters ([2a85b89](https://github.com/cbwinslow/chadwickpy/commit/2a85b899108c5ab41ca42a3fcd0c315a1d63e8ef))
+
 ## [0.3.0](https://github.com/cbwinslow/chadwickpy/compare/v0.2.1...v0.3.0) (2026-10-07)
 
 
