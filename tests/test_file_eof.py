@@ -1,4 +1,4 @@
-"""``CFile.getline`` must follow the 0.11.0 record reader and C's ``feof`` rules, including at the last line."""
+"""``CFile.getline`` follows the 0.11.0 record reader and C's ``feof`` rules at the last line."""
 
 import random
 from pathlib import Path
