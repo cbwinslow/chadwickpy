@@ -25,6 +25,11 @@ from chadwickpy.roster import Roster, roster_batting_hand, roster_throwing_hand
 POS_P, POS_C, POS_MAX, POS_DH, POS_PH, POS_PR = 1, 2, 9, 10, 11, 12
 
 
+def _strlcpy50(value: str | None) -> str:
+    """``CW_STRLCPY`` into ``char[50]`` (0.11.0): at most 49 bytes are kept, NULL gives ""."""
+    return "" if value is None else value[:49]
+
+
 @dataclass(slots=True)
 class Runner:
     """One entry of ``CWGameState.runners``; base 0 is the batter-runner."""
@@ -148,25 +153,31 @@ class State:
     def _place_runner(self, base: int, runner: str) -> None:
         """Tiebreaker runner: responsibility goes to the current pitcher and catcher."""
         r = self.runners[base]
-        r.runner = runner
-        r.pitcher = self.fielders[1][1 - self.batting_team] or ""
-        r.catcher = self.fielders[2][1 - self.batting_team] or ""
+        r.runner = _strlcpy50(runner)
+        r.pitcher = _strlcpy50(self.fielders[1][1 - self.batting_team])
+        r.catcher = _strlcpy50(self.fielders[2][1 - self.batting_team])
         r.is_auto = 1
         self.num_auto_runners[self.batting_team] += 1
 
     def _place_batter(self, batter: str, event_type: int) -> None:
         r = self.runners[0]
-        r.runner = batter
+        r.runner = _strlcpy50(batter)
         if event_type in (Ev.WALK, Ev.INTENTIONALWALK) and self.walk_pitcher:
+            if len(self.walk_pitcher) > 49:
+                # The C does a plain strcpy into char[50] here and overflows into the catcher
+                # field (then the catcher copy overwrites the tail); not reproduced.
+                raise ValueError(
+                    "walk pitcher ID longer than 49 bytes (strcpy overflow in Chadwick)"
+                )
             r.pitcher = self.walk_pitcher
         else:
-            r.pitcher = self.fielders[POS_P][1 - self.batting_team] or ""
-        r.catcher = self.fielders[POS_C][1 - self.batting_team] or ""
+            r.pitcher = _strlcpy50(self.fielders[POS_P][1 - self.batting_team])
+        r.catcher = _strlcpy50(self.fielders[POS_C][1 - self.batting_team])
         r.src_event = self.event_count
         r.is_auto = 0
 
     def _replace_runner(self, base: int, runner: str) -> None:
-        self.runners[base].runner = runner
+        self.runners[base].runner = _strlcpy50(runner)
 
     def _move_runner(self, src: int, dest: int) -> None:
         s, d = self.runners[src], self.runners[dest]
@@ -561,7 +572,7 @@ class GameIter:
         for base in (1, 2, 3):
             pitcher = ev.presadj[base]
             if pitcher is not None:
-                st.runners[base].pitcher = pitcher
+                st.runners[base].pitcher = _strlcpy50(pitcher)
 
         if ev.event_text != "NP":
             st.batter_hand = ev.batter_hand

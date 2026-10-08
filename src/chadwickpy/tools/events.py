@@ -6,8 +6,8 @@ that notice. One function per ``cwevent`` field, in the same order, producing
 the text ``cwevent -q`` (quoted/ascii mode) prints for that field. Rows are
 dicts keyed by the cwevent column names.
 
-A C ``NULL`` string printed through ``%s`` is "(null)" (glibc); ``None`` renders
-that way here so unset players match.
+0.11.0 prints every string field through ``cw_buffer_emit_string``, which turns a ``NULL``
+into "" (0.10 passed it to ``%s``, which glibc prints as "(null)"); ``None`` renders "" here.
 """
 
 import re
@@ -30,7 +30,7 @@ from chadwickpy.tools.tools import iterate_games
 
 
 def _s(value: str | None) -> str:
-    return "(null)" if value is None else value
+    return "" if value is None else value
 
 
 def _tf(flag: object) -> str:
@@ -305,7 +305,7 @@ def _fielded_by_id(c: _Ctx) -> str:
 
 def _team_id(c: _Ctx, which: str) -> str:
     g = c.gi.game
-    return _s(g.info_lookup(which))  # only a missing record is "(null)", not an empty value
+    return _s(g.info_lookup(which))
 
 
 def _base_state_end(c: _Ctx) -> str:
