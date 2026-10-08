@@ -749,18 +749,18 @@ _FORMATS: tuple[tuple[str, str] | None, ...] = (
     ('"%s"', "%-8s"),
     ('"%s"', "%-8s"),
     ('"%s"', "%-8s"),
-    ("%d", "%02d"),
-    ("%d", "%02d"),
-    ("%d", "%02d"),
-    ("%d", "%02d"),
-    ("%d", "%02d"),
-    ("%d", "%02d"),
-    ("%d", "%02d"),
-    ("%d", "%02d"),
-    ("%d", "%02d"),
-    ("%d", "%02d"),
-    ("%d", "%02d"),
-    ("%d", "%02d"),
+    ("%d", "%2d"),
+    ("%d", "%2d"),
+    ("%d", "%2d"),
+    ("%d", "%2d"),
+    ("%d", "%2d"),
+    ("%d", "%2d"),
+    ("%d", "%2d"),
+    ("%d", "%2d"),
+    ("%d", "%2d"),
+    ("%d", "%2d"),
+    ("%d", "%2d"),
+    ("%d", "%2d"),
     ("%d", "%d"),
     ('"%s"', "%-8s"),
     ('"%c"', "%c"),
@@ -771,7 +771,7 @@ _FORMATS: tuple[tuple[str, str] | None, ...] = (
     ("%d", "%d"),
     ("%d", "%d"),
     ("%d", "%d"),
-    ("%d", "%02d"),
+    ("%d", "%2d"),
     ("%d", "%d"),
     ("%d", "%d"),
     ("%d", "%d"),
@@ -832,7 +832,7 @@ def _custom(index: int, ascii_: bool, c: _Ctx, value: str) -> str:
     # cwevent_runner{1,2,3}_defensive_position
     base = {118: 1, 121: 2, 124: 3}[index]
     if not c.gi.state.base_occupied(base):
-        return "0"
+        return "0" if ascii_ else " 0"
     return value if ascii_ else f"{int(value):2d}"
 
 
