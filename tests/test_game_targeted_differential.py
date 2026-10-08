@@ -132,8 +132,6 @@ CASES: dict[str, tuple[str, tuple[int, ...], tuple[int, ...]]] = {
     "dow_plain": (game(), DOW, ()),
     "dow_no_date": (game(drop=("date",)), DOW, ()),
     "date_no_date": (game(drop=("date",)), DATE, ()),
-    "dow_unparsable": (game({"date": "garbage"}), DOW, ()),
-    "dow_year_no_slash": (game({"date": "2020-07-02"}), DOW, ()),
     "dow_two_digit_year": (game({"date": "20/07/02"}), DOW, ()),
     "dow_month13_filtered_out": (game({"date": "2020/13/02"}), DOW, ()),
     "date_short": (game({"date": "2020/7/2"}), DATE, ()),
@@ -225,6 +223,21 @@ def test_case_matches_cwgame(name: str) -> None:
         assert port == real
 
 
+# Dates that sscanf cannot read leave the C with unset month and day; what it prints then depends on
+# the stack (an empty row on some machines, a crash on others - CI saw both). Only the port is
+# asserted: it refuses the input (ADR-003).
+UNREADABLE_DATES = {
+    "dow_unparsable": (game({"date": "garbage"}), DOW, ()),
+    "dow_year_no_slash": (game({"date": "2020-07-02"}), DOW, ()),
+}
+
+
+@pytest.mark.parametrize("name", sorted(UNREADABLE_DATES))
+def test_unreadable_date_is_refused(name: str) -> None:
+    _, port = outcome(*UNREADABLE_DATES[name])
+    assert port is None
+
+
 def test_known_differences_are_as_recorded() -> None:
     for name in ("date_short", "date_short_all"):  # matched since #24 (reads past the date like C)
         real, port = outcome(*KNOWN[name])
@@ -234,7 +247,7 @@ def test_known_differences_are_as_recorded() -> None:
         assert real is not None and port is None
     for name in ("dow_month_no_slash", "dow_no_day"):
         real, port = outcome(*KNOWN[name])
-        assert real is not None and port is None
+        assert port is None  # the C's value comes from the stack: not asserted (varies by machine)
     real, port = outcome(*KNOWN["badj_no_event"])
     assert real is None and port is not None
     real, port = outcome(*KNOWN["line60"])
