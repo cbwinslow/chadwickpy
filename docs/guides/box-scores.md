@@ -5,7 +5,7 @@ description: Generate readable text or XML box scores from Retrosheet event file
 # Box scores (`cwbox`)
 
 ```bash
-cwbox -q -y 2007 2007TST.EVA
+cwbox -Q -y 2007 2007TST.EVA
 ```
 
 ```text
@@ -32,6 +32,6 @@ A -- 22436
 | (none) | plain-text box score |
 | `-X` | XML |
 | `-S` | SportsML (deprecated: Chadwick's own `-S` crashes on nearly every game, so it cannot be checked) |
-| `-i`, `-s`, `-e`, `-y`, `-q` | same filters as the other tools |
+| `-i`, `-s`, `-e`, `-y`, `-D`, `-Q` | same filters as the other tools |
 
 `cwbox` reads the roster files for player names, so run it from the folder that holds `TEAMyyyy` and the `.ROS` files (the current folder, as in Chadwick).

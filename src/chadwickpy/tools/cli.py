@@ -2,7 +2,7 @@
 handling) and the option parsing, messages and field lists of ``cwevent``, ``cwgame``,
 ``cwdaily``, ``cwsub``, ``cwcomment`` and ``cwbox``.
 
-Chadwick is Copyright (c) 2002-2023 Dr T L Turocy and the Chadwick Baseball
+Chadwick is Copyright (c) 2002-2026 Dr T L Turocy and the Chadwick Baseball
 Bureau, licensed GPL-2.0-or-later; this module is a derivative of it and keeps
 that notice. The C keeps the options in globals and reaches each tool through function
 pointers (``cwtools_parse_command_line`` and friends); here a ``Tool`` holds the same hooks

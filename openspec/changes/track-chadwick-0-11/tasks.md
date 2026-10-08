@@ -10,8 +10,8 @@
 - [x] 3.3 File reading: record reader and tokenizer, `padj` semantics
 - [x] 4.1 Re-capture stored reference outputs from 0.11.0
 - [~] 4.2 CI builds Chadwick `v0.11.0` (done: `CHADWICK_REF: v0.11.0`; the build itself is checked by the PR's CI); weekly newest-Chadwick workflow passes
-- [ ] 4.3 Re-run the proof: every season, every field and option, coverage, drift fingerprints
-- [ ] 4.4 Docs and website for 0.11.0 (`-Q`, `-D`, seasons, verification page); ADR for following 0.11.0
+- [x] 4.3 Re-run the proof (2026-10-08): full suite against the real 0.11.0 tools 5,163 passed / 0 failed; every season 1908-2025, six tools, 16 option sets: 1,888 comparisons, 22 GB, 0 differences; 1897-1907 box scores: 176 comparisons, only the 14 known cwbox-text crashes (C SIGSEGV, 1901-1907) differ; drift fingerprints regenerated (672 functions). Coverage was not re-measured (99.06% measured on 0.3.0).
+- [x] 4.4 Docs and website for 0.11.0 (`-Q`, `-D`, seasons, verification page); ADR for following 0.11.0
 - [ ] 4.5 Release 0.4.0 (owner approves the publish)
 
 ## Notes

@@ -12,7 +12,7 @@ inside the unzipped folder.
 Each event file holds one team's home games. Give all of them at once:
 
 ```bash
-cwevent -q -y 2010 -n -f 0,2,3,4,10,14,29,34 2010*.EV? > season_2010.csv
+cwevent -Q -y 2010 -n -f 0,2,3,4,10,14,29,34 2010*.EV? > season_2010.csv
 ```
 
 `2010*.EV?` matches the American League (`.EVA`) and National League (`.EVN`) files. The header
@@ -23,7 +23,7 @@ is written once. On a typical machine this takes about 20 seconds for `cwevent` 
 `cwdaily` has one row per player per game, so season totals are sums:
 
 ```bash
-cwdaily -q -y 2010 -n -f 0,5,19 2010*.EV? > batting.csv
+cwdaily -Q -y 2010 -n -f 0,5,19 2010*.EV? > batting.csv
 ```
 
 ```python
@@ -85,11 +85,11 @@ DuckDB reads the file directly: `duckdb.sql("select * from 'season_2010.csv' lim
 ## One game, or a range of dates
 
 ```bash
-cwevent -q -y 2010 -n -f 0,2,29 -i NYA201004130 2010NYA.EVA     # one game
-cwevent -q -y 2010 -n -f 0,2,29 -s 0601 -e 0630 2010NYA.EVA      # June only
+cwevent -Q -y 2010 -n -f 0,2,29 -i NYA201004130 2010NYA.EVA     # one game
+cwevent -Q -y 2010 -n -f 0,2,29 -s 0601 -e 0630 2010NYA.EVA      # June only
 ```
 
 ## Quiet output in scripts
 
-`-q` turns off the progress lines Chadwick prints. Send errors to a file with
+`-Q` turns off the progress lines Chadwick prints. Send errors to a file with
 `2> errors.txt` so a bad line in an event file does not get lost.

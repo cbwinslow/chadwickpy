@@ -1,6 +1,6 @@
 """Port of Chadwick's XML boxscore output (``src/cwtools/cwboxxml.c``, ``cwbox -X``).
 
-Chadwick is Copyright (c) 2002-2023 Dr T L Turocy and the Chadwick Baseball
+Chadwick is Copyright (c) 2002-2026 Dr T L Turocy and the Chadwick Baseball
 Bureau, licensed GPL-2.0-or-later; this module is a derivative of it and keeps
 that notice. One function per ``cwbox_xml_*`` function, each returning the text
 the C ``printf`` calls write. As in the C, attribute values are written as they

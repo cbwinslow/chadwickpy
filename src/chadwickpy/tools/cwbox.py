@@ -1,6 +1,6 @@
 """Port of Chadwick's ``cwbox`` plain-text mode (``src/cwtools/cwbox.c``), the boxscore generator.
 
-Chadwick is Copyright (c) 2002-2023 Dr T L Turocy and the Chadwick Baseball
+Chadwick is Copyright (c) 2002-2026 Dr T L Turocy and the Chadwick Baseball
 Bureau, licensed GPL-2.0-or-later; this module is a derivative of it and keeps
 that notice. One function per ``cwbox_print_*`` function, each returning the text
 the C ``printf`` calls write. The XML output (``-X``) is in ``cwboxxml``, SportsML (``-S``) in

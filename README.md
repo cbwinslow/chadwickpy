@@ -71,13 +71,14 @@ Machine-readable: [`llms.txt`](https://cbwinslow.github.io/chadwickpy/llms.txt).
 ## Verification
 
 Output is compared byte for byte (standard output, error messages and exit status) with the real
-Chadwick programs, built from commit `c685ab5`:
+Chadwick programs, built from the 0.11.0 release (tag `v0.11.0`):
 
 * every season with game data, 1897 to 2025, all six tools and 16 option sets (2,064 comparisons);
 * every output field of every tool on its own and in combination, both output formats, and every
   game-selection option;
-* tests aimed at every remaining branch of the code: **99% of the lines and branches are reached**, and
-  the rest are listed with the reason they cannot be;
+* tests aimed at every remaining branch of the code (**99% of the lines and branches were reached** when
+  measured on 0.3.0; the 0.4.0 suite of 5,163 tests passes against the real tools), and the rest are listed
+  with the reason they cannot be;
 * a weekly check against the newest Chadwick, and a test that fails when any C function changes.
 
 Details and how to run them yourself: [How it was verified](https://cbwinslow.github.io/chadwickpy/about/verification/).
@@ -86,7 +87,7 @@ CI builds Chadwick and runs the whole suite on Python 3.11-3.13, failing on any 
 ## Licence and credit
 
 GPL-3.0-or-later (`LICENSE`). chadwickpy is a derivative work of Chadwick, Copyright (C)
-2002-2023 Dr T L Turocy and the Chadwick Baseball Bureau, GPL-2.0-or-later (`COPYING-chadwick`,
+2002-2026 Dr T L Turocy and the Chadwick Baseball Bureau, GPL-2.0-or-later (`COPYING-chadwick`,
 `NOTICE`); each ported module keeps that notice. It is independent: Chadwick and Retrosheet do
 not endorse or sponsor it, and it ships no Retrosheet data.
 

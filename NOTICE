@@ -5,7 +5,7 @@ Licensed under GPL-3.0-or-later (see LICENSE).
 Third-party work this package is derived from
 ---------------------------------------------
 Chadwick, the baseball data tools (https://github.com/chadwickbureau/chadwick).
-Copyright (C) 2002-2023 Dr T L Turocy and the Chadwick Baseball Bureau.
+Copyright (C) 2002-2026 Dr T L Turocy and the Chadwick Baseball Bureau.
 Licensed GPL-2.0-or-later (full text in COPYING-chadwick).
 
 Every module under src/chadwickpy/ is a function-by-function Python translation of

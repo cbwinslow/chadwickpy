@@ -1,6 +1,6 @@
 """Port of Chadwick's game container (``src/cwlib/game.c``, reading side).
 
-Chadwick is Copyright (c) 2002-2023 Dr T L Turocy and the Chadwick Baseball
+Chadwick is Copyright (c) 2002-2026 Dr T L Turocy and the Chadwick Baseball
 Bureau, licensed GPL-2.0-or-later; this module is a derivative of it and keeps
 that notice. It follows ``cw_game_read``: events carry the substitutions,
 comments and adjustment records (``badj``, ``padj``, ``ladj``, ``radj``,

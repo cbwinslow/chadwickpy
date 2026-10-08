@@ -5,25 +5,26 @@ description: How chadwickpy output is proven identical to the real Chadwick tool
 # How it was verified
 
 A translation is only useful if it gives the same answers. The checks compare `chadwickpy` with the
-real Chadwick programs, built from commit `c685ab5`, on **standard output, error messages and exit
+real Chadwick programs, built from the 0.11.0 release (tag `v0.11.0`), on **standard output, error messages and exit
 status**, byte for byte.
 
 ## What was checked
 
 | Check | Result |
 |---|---|
-| **Every season with play-by-play, 1908 to 2025** (118 seasons), all six tools, 16 option sets each | 1,888 comparisons, 21.9 GB of output, no differences |
-| **The box-score-only seasons, 1897 to 1907** (Retrosheet has no plays for these) | 176 comparisons; all identical except `cwbox` text on 1901-1907, where the C program crashes and chadwickpy reports an error |
+| **Every season with play-by-play, 1908 to 2025** (118 seasons), all six tools, 16 option sets each, against Chadwick 0.11.0 | 1,888 comparisons, 22 GB of output, no differences |
+| **The box-score-only seasons, 1897 to 1907** (Retrosheet has no plays for these) | 176 comparisons; all identical except `cwbox` text on 1901-1907, where the C program crashes (also in 0.11.0) and chadwickpy reports an error |
 | **Every output field of every tool**, on its own and in random combinations, ASCII and fixed-width | `cwevent` 97 standard + 67 extended fields; `cwgame` 85 + 97; `cwdaily` 154; `cwsub` 25; `cwcomment` 10; all identical, on fixtures from every era and rule variant |
-| **Every game-selection and format option** (`-i`, `-s`, `-e`, `-a`, `-n`, `-ft`, `-f`, `-x`, `-d`, `-q`, `-X`), alone and combined | about 2,500 combinations, all identical; malformed values too |
+| **Every game-selection and format option** (`-i`, `-s`, `-e`, `-a`, `-n`, `-ft`, `-f`, `-x`, `-d`, `-Q`, `-D`, `-X`), alone and combined | about 2,500 combinations, all identical; malformed values too |
 | **The play parser** against Chadwick's own parser | thousands of generated plays covering every modifier, plus hand-built plays for the rare branches |
 | **Synthetic and damaged games**, and the **write side** (re-writing event files) | identical wherever the C behaves in a defined way |
 | **Parallel runs** | identical output on 1 to 40 cores, with `fork`, `spawn` and `forkserver` workers, with any `-j`, and inside a Docker container limited to 2 CPUs on Python 3.14 |
 
 ## How complete is it
 
-* **99% of the code is exercised by the tests** (5,592 statements and 2,382 branches measured). The
-  few lines never reached are listed in the project's task record, each with the reason (for example a
+* **99% of the code was exercised by the tests** when measured on version 0.3.0 (5,592 statements and
+  2,382 branches); version 0.4.0 added tests for every ported Chadwick 0.11.0 change and 5,163 tests pass
+  against the real 0.11.0 tools. The few lines never reached are listed in the project's task record, each with the reason (for example a
   guard for a state the earlier code already rejects), apart from the deprecated SportsML output.
 * **The other direction was measured too:** the real C tools were rebuilt with coverage
   instrumentation and run over the same data. The corpus exercised about 76% of all C lines overall and

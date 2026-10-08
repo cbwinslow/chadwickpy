@@ -1,6 +1,6 @@
 """Port of the writing functions of Chadwick's ``game.c``, ``book.c``, ``roster.c``, ``league.c``.
 
-Chadwick is Copyright (c) 2002-2023 Dr T L Turocy and the Chadwick Baseball
+Chadwick is Copyright (c) 2002-2026 Dr T L Turocy and the Chadwick Baseball
 Bureau, licensed GPL-2.0-or-later; this module is a derivative of it and keeps
 that notice. Each function returns the text the C writes to its ``FILE *``
 (encode it as ``latin-1``; text is held one byte per character, as in C).

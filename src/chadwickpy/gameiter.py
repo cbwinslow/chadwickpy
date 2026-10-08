@@ -1,6 +1,6 @@
 """Port of Chadwick's game iterator (``src/cwlib/gameiter.c``).
 
-Chadwick is Copyright (c) 2002-2023 Dr T L Turocy and the Chadwick Baseball
+Chadwick is Copyright (c) 2002-2026 Dr T L Turocy and the Chadwick Baseball
 Bureau, licensed GPL-2.0-or-later; this module is a derivative of it and keeps
 that notice. Names map onto the C functions (``cw_gamestate_x`` -> ``State.x``
 or a module function) so the two can be read side by side.

@@ -71,7 +71,7 @@ cwevent -y 2010 -n -f 0,2,29 2010BOS.EVA 2010NYA.EVA
 ## Output format
 
 Default is quoted, comma-separated text (`-a`). `-ft` writes fixed-width Fortran-style
-output. `-q` suppresses the progress messages Chadwick prints to the screen (stderr), which
+output. `-Q` suppresses the progress messages Chadwick prints to the screen (stderr), which
 is useful in scripts.
 
 ## Multi-core processing

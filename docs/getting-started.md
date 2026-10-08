@@ -40,7 +40,7 @@ chadwickpy cwevent -h     # same tool, always this package's copy
 python -m chadwickpy cwevent -h
 ```
 
-You should see `Chadwick expanded event descriptor, version 0.10.0` and the option list.
+You should see `Chadwick expanded event descriptor, version 0.11.0` and the option list.
 `chadwickpy` needs Python 3.11 or newer and nothing else.
 
 ## 2. Get Retrosheet data

@@ -1,6 +1,6 @@
 """Port of Chadwick's play-text parser (``src/cwlib/parse.c``).
 
-Chadwick is Copyright (c) 2002-2023 Dr T L Turocy and the Chadwick Baseball
+Chadwick is Copyright (c) 2002-2026 Dr T L Turocy and the Chadwick Baseball
 Bureau, licensed GPL-2.0-or-later. This module is a Python translation of its
 parser, so it is a derivative work and keeps that notice. Function names map
 one-to-one onto the C functions (``cw_parse_x`` -> ``_x``) so the two can be

@@ -2,6 +2,18 @@
 
 Newest first.
 
+## ADR-005: Follow the official Chadwick release exactly (0.11.0), including `-Q`
+
+**Decision (2026-10-08, owner: "same results as the C tools every time, including future versions").**
+chadwickpy follows the **released** Chadwick (tag `v0.11.0`, 2026-09-10), not a development commit.
+That includes its command line: the quiet switch is `-Q` (`-q` is rejected as "Invalid option", as in
+the C), and `-D dir` exists. No `-q` alias. The change ships as **0.4.0** (breaking for scripts that
+pass `-q`) with the difference listed in the release notes and the FAQ. **Why.** The project rule is
+that the port is a translation of the C and its output is compared with the real tools byte for byte;
+an alias would be a deliberate difference that every future comparison has to carve out. A weekly
+workflow builds the newest Chadwick and runs the whole suite, which is how 0.11.0 was found (4,680 of
+5,083 tests differed on the first run). **Revisit if:** many users ask for a `-q` alias.
+
 ## ADR-004: Speed is acceptable for 1.0; workers follow container CPU limits
 
 **Decision (2026-10-07, owner).** (1) The port ships at its current speed: about 10 times slower
