@@ -1,6 +1,6 @@
 """Port of Chadwick's ``src/cwlib/book.c`` (``cw_scorebook_read``) and ``cw_file_find_first_game``.
 
-Chadwick is Copyright (c) 2002-2023 Dr T L Turocy and the Chadwick Baseball
+Chadwick is Copyright (c) 2002-2026 Dr T L Turocy and the Chadwick Baseball
 Bureau, licensed GPL-2.0-or-later; this module is a derivative of it and keeps
 that notice.
 """
@@ -8,42 +8,36 @@ that notice.
 from collections.abc import Callable, Iterator
 from dataclasses import dataclass, field
 
-from chadwickpy.file import CFile, StrTok
+from chadwickpy.file import CFile, Tokenizer
 from chadwickpy.game import Game, read_game
-
-COMMENT_BUFSIZE = 256  # ``char buf[256]`` in ``cw_scorebook_read_comments`` and the finder
 
 
 def _read_comments(file: CFile) -> tuple[bool, list[str]]:
     """``cw_scorebook_read_comments``: leading ``com`` lines. False if the file is empty."""
-    tok = StrTok()
+    tok = Tokenizer()
     comments: list[str] = []
-    while True:
-        buf = file.fgets(COMMENT_BUFSIZE)
-        if buf is None:
-            return False, comments
-        kind = tok(buf)
-        com = tok(None)
+    while (line := file.getline()) is not None:
+        kind = tok(line)
+        com = tok.next()
         if kind is not None and kind == "com" and com is not None:
             comments.append(com)
         else:
             return True, comments
+    return False, comments
 
 
 def find_first_game(file: CFile) -> bool:
     """``cw_file_find_first_game``: rewind, then stop at the first line that begins ``id``"""
-    tok = StrTok()
+    tok = Tokenizer()
     file.setpos(0)
-    while not file.eof:
+    while True:
         filepos = file.getpos()
-        buf = file.fgets(COMMENT_BUFSIZE)
-        if buf is None:
+        line = file.getline()
+        if line is None:
             return False
-        kind = tok(buf)
-        if kind is not None and kind == "id":
+        if tok(line) == "id":
             file.setpos(filepos)
             return True
-    return False
 
 
 def _strcmp(a: str | None, b: str | None) -> int:
