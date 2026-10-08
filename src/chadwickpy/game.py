@@ -387,7 +387,9 @@ def read_game(file: CFile) -> Game | None:
                 ev.pitcher_hand = pit_hand
                 ev.pitcher_hand_id = pit_hand_pitcher
                 if play is None:
-                    raise ValueError(f"play record with no play field (Chadwick would crash): {line!r}")
+                    raise ValueError(
+                        f"play record with no play field (Chadwick would crash): {line!r}"
+                    )
                 if play != "NP":
                     # padj applies to the next non-NP play
                     pit_hand, pit_hand_pitcher = " ", ""

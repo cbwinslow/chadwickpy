@@ -26,7 +26,7 @@ from test_event_option_sweep import FILES, FORMATS, SELECTIONS  # noqa: E402
 
 # tool -> field-list option sets (default, a short list, every field)
 FIELDS = {
-    "cwgame": {"std": [], "low": ["-f", "0-5"], "all": ["-f", "0-84", "-x", "0-96"]},
+    "cwgame": {"std": [], "low": ["-f", "0-5"], "all": ["-f", "0-85", "-x", "0-96"]},
     "cwdaily": {"std": [], "low": ["-f", "0-5"], "all": ["-f", "0-153"]},
     "cwsub": {"std": [], "low": ["-f", "0-5"], "all": ["-f", "0-24"]},
     "cwcomment": {"std": [], "low": ["-f", "0-3"], "all": ["-f", "0-9"]},

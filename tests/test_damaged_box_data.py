@@ -78,7 +78,7 @@ CASES = {
 }  # fmt: skip
 TOOLS = ["cwgame", "cwdaily", "cwbox"]
 FLAGS = {
-    "cwgame": ["-n", "-f", "0-84", "-x", "0-96"],
+    "cwgame": ["-n", "-f", "0-85", "-x", "0-96"],
     "cwdaily": ["-n", "-f", "0-153"],
     "cwbox": [],
 }

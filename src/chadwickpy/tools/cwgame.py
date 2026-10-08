@@ -1,21 +1,21 @@
 """Port of Chadwick's ``cwgame`` (``src/cwtools/cwgame.c``), the game descriptor generator.
 
-Chadwick is Copyright (c) 2002-2023 Dr T L Turocy and the Chadwick Baseball
+Chadwick is Copyright (c) 2002-2026 Dr T L Turocy and the Chadwick Baseball
 Bureau, licensed GPL-2.0-or-later; this module is a derivative of it and keeps
-that notice. One function per ``cwgame`` field, each returning the text the C
-``sprintf`` writes; ``FIELDS`` and ``EXT_FIELDS`` are the C ``field_data`` and
+that notice. One function per ``cwgame`` field, each writing to a ``CWBuffer`` what the C
+``cw_buffer_emit*`` calls write; ``FIELDS`` and ``EXT_FIELDS`` are the C ``field_data`` and
 ``ext_field_data`` tables (function, header, description) in the same order. The
 C declares the tabulated team totals with macros (``DECLARE_TABULATED_*_FUNC``);
-the port builds the same functions with the factories below. ``ascii`` is the C
-global of the same name: true for the comma-delimited quoted format (``-a``, the
-default), false for the fixed-width Fortran format (``-ft``).
+the port builds the same functions with the factories below. The buffer's
+``use_delimiter`` is the C global ``ascii``: true for the comma-delimited quoted format (``-a``,
+the default), false for the fixed-width Fortran format (``-ft``).
 
-A C ``NULL`` string printed through ``%s`` is "(null)" (glibc). Where the C
-dereferences ``NULL``, reads an uninitialised variable (a short date, an
-unparsable start time) or indexes an array out of range, this port raises
-``ValueError``. Deviation: the C builds each line in a 4096-byte buffer; the port
-has no line limit. Entries of ``FIELDS`` that are ``None`` (lineup and finishing
-pitcher fields, 46-83) are written by ``game_line`` itself, as in the C.
+A C ``NULL`` string printed through ``%s`` is "(null)" (glibc). Where the C dereferences ``NULL``,
+reads an uninitialised variable (a short date, an unparsable start time) or indexes an array out
+of range, this port raises ``ValueError``. Like the C, each line is built in a 4096-byte buffer
+and a line that does not fit is an error (``BufferTruncated``, the C's ``exit(1)``). Entries of
+``FIELDS`` that are ``None`` (lineup and finishing pitcher fields, 46-83) are written by
+``game_line`` itself, as in the C.
 """
 
 from collections.abc import Callable, Collection, Iterator
@@ -35,7 +35,92 @@ from chadwickpy.gameiter import GameIter
 from chadwickpy.roster import League, Roster
 from chadwickpy.tools.tools import cut_at_nul, date_digits, iterate_games
 
-Field = Callable[[bool, GameIter, Boxscore, Roster | None, Roster | None], str]
+# Format of the gamedate field (-dsf, -dsp, -dnf, -dnp). Unlike BGAME, whose default is a
+# two-digit year, cwgame defaults to a four-digit year (no slashes).
+CWGAME_DATE_NOSLASH_FULL = 0
+CWGAME_DATE_NOSLASH_PARTIAL = 1
+CWGAME_DATE_SLASH_FULL = 2
+CWGAME_DATE_SLASH_PARTIAL = 3
+
+BUFFER_SIZE = 4096  # ``char output_line[4096]``
+
+
+class BufferTruncated(ValueError):
+    """The line (or header) does not fit the C's 4096-byte buffer: the C prints ``message`` to
+    stderr and calls ``exit(1)``"""
+
+
+class CWBuffer:
+    """``buffer.h``: a bounded output buffer with an optional field delimiter"""
+
+    def __init__(self, size: int, use_delimiter: bool, delimiter: str = ",") -> None:
+        self.size = size
+        self.length = 0  # ``current - storage``
+        self.parts: list[str] = []
+        self.truncated = False
+        self.need_sep = False
+        self.field_open = False
+        self.use_delimiter = use_delimiter
+        self.delimiter = delimiter
+
+    def text(self) -> str:
+        return "".join(self.parts)
+
+    def emit(self, text: str) -> int:
+        """``cw_buffer_emit``, given the already formatted ``text``"""
+        if self.length >= self.size:
+            self.truncated = True
+            return 0
+        # Add delimiter if required
+        if self.use_delimiter and self.need_sep and not self.field_open:
+            if self.size - self.length > 1:
+                self.parts.append(self.delimiter)
+                self.length += 1
+            else:
+                self.truncated = True
+                return 0
+        if not self.field_open:
+            self.need_sep = True
+        available = self.size - self.length
+        n = len(text)
+        if n >= available:
+            self.parts.append(text[: available - 1])
+            self.length = self.size - 1
+            self.truncated = True
+            return available - 1
+        self.parts.append(text)
+        self.length += n
+        return n
+
+    def begin_field(self) -> None:
+        if self.use_delimiter and self.need_sep:
+            if self.size - self.length > 1:
+                self.parts.append(self.delimiter)
+                self.length += 1
+            else:
+                self.truncated = True
+        self.need_sep = False
+        self.field_open = True
+
+    def end_field(self) -> None:
+        self.field_open = False
+        self.need_sep = True
+
+    def emit_string(self, s: str | None, width: int) -> int:
+        """``cw_buffer_emit_string``: quoted, or left-justified in ``width``"""
+        text = "" if s is None else s
+        if self.use_delimiter:
+            return self.emit(f'"{text}"')
+        return self.emit(f"{text:<{width}}")
+
+    def emit_int(self, value: int, width: int) -> int:
+        """``cw_buffer_emit_int``: right-justified in ``width`` unless delimited"""
+        if self.use_delimiter or width == 0:
+            return self.emit(str(value))
+        return self.emit(f"{value:{width}d}")
+
+
+Field = Callable[[CWBuffer, GameIter, Boxscore, Roster | None, Roster | None], int]
 
 _T = TypeVar("_T")
 
@@ -64,28 +149,18 @@ def _info(gi: GameIter, key: str) -> str | None:
     return gi.game.info_lookup(key)
 
 
-def _integer_or_null(value: int) -> str:
+def _print_integer_or_null(buf: CWBuffer, value: int) -> int:
     """``cwgame_print_integer_or_null``: a negative number is a null, shown as nothing"""
-    return str(value) if value >= 0 else ""
-
-
-def _quoted_or_padded(a: bool, text: str, width: int) -> str:
-    """``(ascii) ? "\\"%s\\"" : "%-<width>s"``"""
-    return f'"{text}"' if a else f"{text:<{width}}"
+    return buf.emit(str(value) if value >= 0 else "")
 
 
 def _info_text(key: str, width: int) -> Field:
-    """``(tmp = cw_game_info_lookup(game, key)) ? tmp : ""`` through the quoted/padded format"""
+    """``cwgame_print_string_or_null`` of ``cw_game_info_lookup(game, key)``"""
 
-    def f(a: bool, gi: GameIter, box: Boxscore, v: Roster | None, h: Roster | None) -> str:
-        return _quoted_or_padded(a, _info(gi, key) or "", width)
+    def f(buf: CWBuffer, gi: GameIter, box: Boxscore, v: Roster | None, h: Roster | None) -> int:
+        return buf.emit_string(_info(gi, key), width)
 
     return f
-
-
-def _int_field(a: bool, value: int, width: int) -> str:
-    """``(ascii) ? "%d" : "%<width>d"``"""
-    return str(value) if a else f"{value:{width}d}"
 
 
 def _game_find_name(game: Game, player_id: str | None) -> str | None:
@@ -101,15 +176,15 @@ def _game_find_name(game: Game, player_id: str | None) -> str | None:
 
 
 def _find_player_name(
-    game: Game, player_id: str, visitors: Roster | None, home: Roster | None
-) -> str:
+    game: Game, buf: CWBuffer, player_id: str, visitors: Roster | None, home: Roster | None
+) -> int:
     """``cwgame_find_player_name``"""
     bio = visitors.player_find(player_id) if visitors is not None else None
     if bio is None and home is not None:
         bio = home.player_find(player_id)
     if bio is not None:
-        return f'"{bio.first_name} {bio.last_name}"'
-    return f'"{_s(_game_find_name(game, player_id))}"'
+        return buf.emit(f'"{bio.first_name} {bio.last_name}"')
+    return buf.emit(f'"{_s(_game_find_name(game, player_id))}"')
 
 
 def _day_of_week_index(month: int, day: int, year: int) -> int:
@@ -133,36 +208,64 @@ def _lookup(text: str | None, table: tuple[tuple[int, str], ...]) -> int:
 
 
 def _lookup_field(key: str, table: tuple[tuple[int, str], ...]) -> Field:
-    def f(a: bool, gi: GameIter, box: Boxscore, v: Roster | None, h: Roster | None) -> str:
-        return str(_lookup(_info(gi, key), table))
+    def f(buf: CWBuffer, gi: GameIter, box: Boxscore, v: Roster | None, h: Roster | None) -> int:
+        return buf.emit_int(_lookup(_info(gi, key), table), 1)
 
     return f
 
 
-# Fields 0-45, 84 --------------------------------------------------------------------------
+# Fields 0-45, 84, 85 ------------------------------------------------------------------------
 
 
-def _game_id(a: bool, gi: GameIter, box: Boxscore, v: Roster | None, h: Roster | None) -> str:
-    return _quoted_or_padded(a, gi.game.game_id, 12)
+def _game_id(buf: CWBuffer, gi: GameIter, box: Boxscore, v: Roster | None, h: Roster | None) -> int:
+    return buf.emit_string(gi.game.game_id, 12)
 
 
-def _date(a: bool, gi: GameIter, box: Boxscore, v: Roster | None, h: Roster | None) -> str:
-    text = date_digits(_deref(_info(gi, "date")))
-    return f'"{text}"' if a else text
+# The characters of the date that each format prints, in print order
+_DATE_FORMATS = {
+    CWGAME_DATE_SLASH_FULL: (5, 6, 8, 9, 0, 1, 2, 3),
+    CWGAME_DATE_SLASH_PARTIAL: (5, 6, 8, 9, 2, 3),
+    CWGAME_DATE_NOSLASH_PARTIAL: (2, 3, 5, 6, 8, 9),
+    CWGAME_DATE_NOSLASH_FULL: (0, 1, 2, 3, 5, 6, 8, 9),
+}
 
 
-def _number(a: bool, gi: GameIter, box: Boxscore, v: Roster | None, h: Roster | None) -> str:
+def _date(
+    buf: CWBuffer,
+    gi: GameIter,
+    box: Boxscore,
+    v: Roster | None,
+    h: Roster | None,
+    date_format: int = CWGAME_DATE_NOSLASH_FULL,
+) -> int:
+    """``cwgame_date``; the C reads the global ``date_format``, here a parameter"""
+    date = _deref(_info(gi, "date"))
+    indices = _DATE_FORMATS.get(date_format, _DATE_FORMATS[CWGAME_DATE_NOSLASH_FULL])
+    c = date_digits(date, indices)
+    if date_format == CWGAME_DATE_SLASH_FULL:
+        text = f"{c[0:2]}/{c[2:4]}/{c[4:8]}"
+    elif date_format == CWGAME_DATE_SLASH_PARTIAL:
+        text = f"{c[0:2]}/{c[2:4]}/{c[4:6]}"
+    else:
+        text = c
+    return buf.emit(f'"{text}"' if buf.use_delimiter else text)
+
+
+def _number(buf: CWBuffer, gi: GameIter, box: Boxscore, v: Roster | None, h: Roster | None) -> int:
     tmp = _info(gi, "number")
-    return _int_field(a, cw_atoi(tmp) if tmp is not None else 0, 5)
+    return buf.emit_int(cw_atoi(tmp) if tmp is not None else 0, 5)
 
 
 DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
 
 
-def _day_of_week(a: bool, gi: GameIter, box: Boxscore, v: Roster | None, h: Roster | None) -> str:
+def _day_of_week(
+    buf: CWBuffer, gi: GameIter, box: Boxscore, v: Roster | None, h: Roster | None
+) -> int:
     date = _info(gi, "date")
     if date is None:
-        return ""
+        buf.emit_string("", 9)
+        return 0
     year = scan_int(date, 0)
     month = day = None
     if year is not None and date[year[1] : year[1] + 1] == "/":
@@ -175,14 +278,15 @@ def _day_of_week(a: bool, gi: GameIter, box: Boxscore, v: Roster | None, h: Rost
     if 0 < y <= 99:
         y += 1900  # assume that two-digit years are in the 20th century
     gi.leftovers["year"] = y  # the C local `year`; see _start_time
-    name = DAY_NAMES[_day_of_week_index(month[0], day[0], y)]
-    return f'"{name}"' if a else name
+    return buf.emit_string(DAY_NAMES[_day_of_week_index(month[0], day[0], y)], 9)
 
 
-def _start_time(a: bool, gi: GameIter, box: Boxscore, v: Roster | None, h: Roster | None) -> str:
+def _start_time(
+    buf: CWBuffer, gi: GameIter, box: Boxscore, v: Roster | None, h: Roster | None
+) -> int:
     text = _info(gi, "starttime")
     if text is None:
-        return "0" if a else "   0"
+        return buf.emit("0" if buf.use_delimiter else "   0")
     hour = scan_int(text, 0)
     minute = None
     if hour is not None and text[hour[1] : hour[1] + 1] == ":":
@@ -202,162 +306,193 @@ def _start_time(a: bool, gi: GameIter, box: Boxscore, v: Roster | None, h: Roste
                 f"unparsable start time {text!r} (uninitialised value in Chadwick; "
                 "the day-of-week field did not run first)"
             )
-        return _int_field(a, hour[0] * 100 + year, 4)
-    return _int_field(a, hour[0] * 100 + minute[0], 4)
+        return buf.emit_int(hour[0] * 100 + year, 4)
+    return buf.emit_int(hour[0] * 100 + minute[0], 4)
 
 
-def _use_dh(a: bool, gi: GameIter, box: Boxscore, v: Roster | None, h: Roster | None) -> str:
+def _use_dh(buf: CWBuffer, gi: GameIter, box: Boxscore, v: Roster | None, h: Roster | None) -> int:
     tmp = _info(gi, "usedh")
     c = "T" if tmp is not None and tmp == "true" else "F"
-    return f'"{c}"' if a else c
+    return buf.emit(f'"{c}"' if buf.use_delimiter else c)
 
 
-def _day_night(a: bool, gi: GameIter, box: Boxscore, v: Roster | None, h: Roster | None) -> str:
+def _day_night(
+    buf: CWBuffer, gi: GameIter, box: Boxscore, v: Roster | None, h: Roster | None
+) -> int:
     tmp = _info(gi, "daynight")
     c = "N" if tmp is not None and tmp == "night" else "D"
-    return f'"{c}"' if a else c
+    return buf.emit(f'"{c}"' if buf.use_delimiter else c)
 
 
 def _starter_pitcher(team: int) -> Field:
-    def f(a: bool, gi: GameIter, box: Boxscore, v: Roster | None, h: Roster | None) -> str:
+    def f(buf: CWBuffer, gi: GameIter, box: Boxscore, v: Roster | None, h: Roster | None) -> int:
         app = gi.game.starter_by_position(team, 1)
-        return _quoted_or_padded(a, app.player_id if app is not None else "", 8)
+        return buf.emit_string(app.player_id if app is not None else "", 8)
 
     return f
 
 
-def _attendance(a: bool, gi: GameIter, box: Boxscore, v: Roster | None, h: Roster | None) -> str:
+def _attendance(
+    buf: CWBuffer, gi: GameIter, box: Boxscore, v: Roster | None, h: Roster | None
+) -> int:
     tmp = _info(gi, "attendance")
     value = (
         cw_atoi(tmp, "Warning: invalid value '%s' for info,attendance\n")
         if tmp is not None and tmp != ""
         else 0
     )
-    return _int_field(a, value, 5)
+    return buf.emit(str(value) if buf.use_delimiter else f"{value:5d}")
 
 
-def _temperature(a: bool, gi: GameIter, box: Boxscore, v: Roster | None, h: Roster | None) -> str:
+def _temperature(
+    buf: CWBuffer, gi: GameIter, box: Boxscore, v: Roster | None, h: Roster | None
+) -> int:
     value = _info(gi, "temp")
     if value is None or value == "" or value == "unknown":
-        return _int_field(a, 0, 3)
-    return _int_field(a, cw_atoi(value, "Warning: invalid value '%s' for info,temp\n"), 3)
+        return buf.emit_int(0, 3)
+    return buf.emit_int(cw_atoi(value, "Warning: invalid value '%s' for info,temp\n"), 3)
 
 
-def _wind_speed(a: bool, gi: GameIter, box: Boxscore, v: Roster | None, h: Roster | None) -> str:
+def _wind_speed(
+    buf: CWBuffer, gi: GameIter, box: Boxscore, v: Roster | None, h: Roster | None
+) -> int:
     value = _info(gi, "windspeed")
     if value is None or value == "" or value == "unknown":
-        return "0"
-    return str(cw_atoi(value, "Warning: invalid value '%s' for info,windspeed\n"))
+        return buf.emit_int(0, 2)
+    return buf.emit_int(cw_atoi(value, "Warning: invalid value '%s' for info,windspeed\n"), 2)
 
 
-def _time_of_game(a: bool, gi: GameIter, box: Boxscore, v: Roster | None, h: Roster | None) -> str:
+def _time_of_game(
+    buf: CWBuffer, gi: GameIter, box: Boxscore, v: Roster | None, h: Roster | None
+) -> int:
     tmp = _info(gi, "timeofgame")
     value = (
         cw_atoi(tmp, "Warning: invalid value '%s' for info,timeofgame\n")
         if tmp is not None and tmp != ""
         else 0
     )
-    return _int_field(a, value, 5)
+    return buf.emit(str(value) if buf.use_delimiter else f"{value:5d}")
 
 
-def _innings(a: bool, gi: GameIter, box: Boxscore, v: Roster | None, h: Roster | None) -> str:
+def _innings(buf: CWBuffer, gi: GameIter, box: Boxscore, v: Roster | None, h: Roster | None) -> int:
     if gi.game.events:
-        return _int_field(a, gi.state.inning, 2)
+        return buf.emit_int(gi.state.inning, 2)
     i = 1
     while i < 50:
         if box.linescore[i][0] < 0 and box.linescore[i][1] < 0:
             break
         i += 1
-    return _int_field(a, i - 1, 2)
+    return buf.emit_int(i - 1, 2)
 
 
 def _box_pair(attr: str, team: int) -> Field:
     """``box->score[t]``, ``box->hits[t]``, ``box->errors[t]``"""
 
-    def f(a: bool, gi: GameIter, box: Boxscore, v: Roster | None, h: Roster | None) -> str:
-        return _int_field(a, getattr(box, attr)[team], 2)
+    def f(buf: CWBuffer, gi: GameIter, box: Boxscore, v: Roster | None, h: Roster | None) -> int:
+        return buf.emit_int(getattr(box, attr)[team], 2)
 
     return f
 
 
 def _lob(team: int) -> Field:
-    def f(a: bool, gi: GameIter, box: Boxscore, v: Roster | None, h: Roster | None) -> str:
+    def f(buf: CWBuffer, gi: GameIter, box: Boxscore, v: Roster | None, h: Roster | None) -> int:
         if gi.game.events:
-            return _int_field(a, gi.state.left_on_base(team), 2)
-        return _int_field(a, box.lob[team], 2)
+            return buf.emit_int(gi.state.left_on_base(team), 2)
+        return buf.emit_int(box.lob[team], 2)
 
     return f
 
 
-def _game_type(a: bool, gi: GameIter, box: Boxscore, v: Roster | None, h: Roster | None) -> str:
+def _game_type(
+    buf: CWBuffer, gi: GameIter, box: Boxscore, v: Roster | None, h: Roster | None
+) -> int:
     tmp = _info(gi, "gametype")
-    return _quoted_or_padded(a, tmp if tmp is not None and tmp != "" else "regular", 12)
+    return buf.emit_string(tmp if tmp is not None and tmp != "" else "regular", 12)
 
 
-def starting_player(a: bool, game: Game, team: int, slot: int) -> str:
+def starting_player(buf: CWBuffer, game: Game, team: int, slot: int) -> int:
     """``cwgame_starting_player``"""
     starter = game.starter_find(team, slot)
     if starter is not None:
-        return _quoted_or_padded(a, starter.player_id, 8)
-    return "(null)"
+        return buf.emit_string(starter.player_id, 8)
+    return buf.emit_string("(null)", 8)
 
 
-def starting_position(game: Game, team: int, slot: int) -> str:
+def starting_position(buf: CWBuffer, game: Game, team: int, slot: int) -> int:
     """``cwgame_starting_position``"""
     starter = game.starter_find(team, slot)
-    return str(starter.pos) if starter is not None else "0"
+    return buf.emit_int(starter.pos if starter is not None else 0, 1)
 
 
-def final_pitcher(a: bool, box: Boxscore, team: int) -> str:
-    """``cwgame_final_pitcher``"""
+def final_pitcher(buf: CWBuffer, box: Boxscore, team: int) -> int:
+    """``cwgame_final_pitcher``: the last pitcher used, unless the starter went the distance"""
     pitcher = box.pitchers[team]
-    player_id = pitcher.prev.player_id if pitcher is not None and pitcher.prev is not None else ""
-    return _quoted_or_padded(a, player_id, 8)
+    player_id = pitcher.player_id if pitcher is not None and pitcher.prev is not None else ""
+    return buf.emit_string(player_id, 8)
 
 
 # Extended fields ----------------------------------------------------------------------------
 
 
 def _league(team: int) -> Field:
-    def f(a: bool, gi: GameIter, box: Boxscore, v: Roster | None, h: Roster | None) -> str:
+    def f(buf: CWBuffer, gi: GameIter, box: Boxscore, v: Roster | None, h: Roster | None) -> int:
         roster = v if team == 0 else h
-        return f'"{roster.league if roster is not None else ""}"'
+        return buf.emit_string(roster.league if roster is not None else "", 2)
 
     return f
 
 
-def _empty(a: bool, gi: GameIter, box: Boxscore, v: Roster | None, h: Roster | None) -> str:
-    return ""
+def _empty_string(width: int) -> Field:
+    """``cw_buffer_emit_string(buffer, "", width)``"""
+
+    def f(buf: CWBuffer, gi: GameIter, box: Boxscore, v: Roster | None, h: Roster | None) -> int:
+        return buf.emit_string("", width)
+
+    return f
 
 
-def _length_outs(a: bool, gi: GameIter, box: Boxscore, v: Roster | None, h: Roster | None) -> str:
+def _protest_info(
+    buf: CWBuffer, gi: GameIter, box: Boxscore, v: Roster | None, h: Roster | None
+) -> int:
+    return buf.emit("")
+
+
+def _length_outs(
+    buf: CWBuffer, gi: GameIter, box: Boxscore, v: Roster | None, h: Roster | None
+) -> int:
     outs = 0
     for t in range(2):
         pitcher = get_starting_pitcher(box, t)
         while pitcher is not None:
             outs += pitcher.pitching.outs
             pitcher = pitcher.next
-    return str(outs)
+    return buf.emit_int(outs, 3)
+
+
+def generate_linescore(buf: CWBuffer, box: Boxscore, team: int) -> int:
+    """``cwgame_generate_linescore``"""
+    count = 0
+    buf.begin_field()
+    i = 1
+    while i < 50:
+        if box.linescore[i][team] < 0 and box.linescore[i][1] < 0:
+            break
+        if box.linescore[i][team] >= 10:
+            count += buf.emit(f"({box.linescore[i][team]})")
+        elif box.linescore[i][0] >= 0:
+            count += buf.emit(str(box.linescore[i][team]))
+        else:
+            count += buf.emit("x")
+        i += 1
+    buf.end_field()
+    return count
 
 
 def _line(team: int) -> Field:
     """``cwgame_visitors_line`` and ``cwgame_home_line``"""
 
-    def f(a: bool, gi: GameIter, box: Boxscore, v: Roster | None, h: Roster | None) -> str:
-        out = ""
-        i = 1
-        while i < 50:
-            if box.linescore[i][0] < 0 and box.linescore[i][1] < 0:
-                break
-            score = box.linescore[i][team]
-            if score >= 10:
-                out += f"({score})"
-            elif score >= 0:
-                out += str(score)
-            else:
-                out += "x"
-            i += 1
-        return out
+    def f(buf: CWBuffer, gi: GameIter, box: Boxscore, v: Roster | None, h: Roster | None) -> int:
+        return generate_linescore(buf, box, team)
 
     return f
 
@@ -366,7 +501,7 @@ def _tabulated_batter(team: int, attr: str) -> Field:
     """``DECLARE_TABULATED_BATTER_FUNC``: a negative (null) stat stops that slot's walk and sets
     the total to -1, but the next slot goes on adding to it"""
 
-    def f(a: bool, gi: GameIter, box: Boxscore, v: Roster | None, h: Roster | None) -> str:
+    def f(buf: CWBuffer, gi: GameIter, box: Boxscore, v: Roster | None, h: Roster | None) -> int:
         tot = 0
         for slot in range(1, 10):
             player: BoxPlayer | None = get_starter(box, team, slot)
@@ -377,7 +512,7 @@ def _tabulated_batter(team: int, attr: str) -> Field:
                     break
                 tot += value
                 player = player.next
-        return _integer_or_null(tot)
+        return _print_integer_or_null(buf, tot)
 
     return f
 
@@ -385,13 +520,13 @@ def _tabulated_batter(team: int, attr: str) -> Field:
 def _tabulated_pitcher(team: int, attr: str) -> Field:
     """``DECLARE_TABULATED_PITCHER_FUNC``"""
 
-    def f(a: bool, gi: GameIter, box: Boxscore, v: Roster | None, h: Roster | None) -> str:
+    def f(buf: CWBuffer, gi: GameIter, box: Boxscore, v: Roster | None, h: Roster | None) -> int:
         tot = 0
         pitcher: BoxPitcher | None = get_starting_pitcher(box, team)
         while pitcher is not None:
             tot += getattr(pitcher.pitching, attr)
             pitcher = pitcher.next
-        return _integer_or_null(tot)
+        return _print_integer_or_null(buf, tot)
 
     return f
 
@@ -399,7 +534,7 @@ def _tabulated_pitcher(team: int, attr: str) -> Field:
 def _tabulated_fielder(team: int, attr: str, frompos: int, topos: int) -> Field:
     """``DECLARE_TABULATED_FIELDER_FUNC``"""
 
-    def f(a: bool, gi: GameIter, box: Boxscore, v: Roster | None, h: Roster | None) -> str:
+    def f(buf: CWBuffer, gi: GameIter, box: Boxscore, v: Roster | None, h: Roster | None) -> int:
         tot = 0
         for slot in range(10):
             player = get_starter(box, team, slot)
@@ -409,22 +544,22 @@ def _tabulated_fielder(team: int, attr: str, frompos: int, topos: int) -> Field:
                     if fielding is not None:
                         value = getattr(fielding, attr)
                         if value < 0:
-                            return "-1"
+                            return buf.emit("-1")
                         tot += value
                 player = player.next
-        return _integer_or_null(tot)
+        return _print_integer_or_null(buf, tot)
 
     return f
 
 
 def _pitcher_count(team: int) -> Field:
-    def f(a: bool, gi: GameIter, box: Boxscore, v: Roster | None, h: Roster | None) -> str:
+    def f(buf: CWBuffer, gi: GameIter, box: Boxscore, v: Roster | None, h: Roster | None) -> int:
         pitcher = get_starting_pitcher(box, team)
         i = 0
         while pitcher is not None:
             pitcher = pitcher.next
             i += 1
-        return str(i)
+        return buf.emit_int(i, 2)
 
     return f
 
@@ -432,67 +567,72 @@ def _pitcher_count(team: int) -> Field:
 def _box_count(attr: str, team: int) -> Field:
     """``box->er[t]``, ``box->dp[t]``, ``box->tp[t]``"""
 
-    def f(a: bool, gi: GameIter, box: Boxscore, v: Roster | None, h: Roster | None) -> str:
-        return str(getattr(box, attr)[team])
+    def f(buf: CWBuffer, gi: GameIter, box: Boxscore, v: Roster | None, h: Roster | None) -> int:
+        return buf.emit_int(getattr(box, attr)[team], 2)
 
     return f
 
 
-def _named(key: str) -> Field:
-    """``cwgame_winning_pitcher_name`` and its losing/save twins"""
+def _named(key: str, quoted_none: bool = True) -> Field:
+    """``cwgame_winning_pitcher_name`` and its losing/save twins. The C save version prints its
+    "(none)" with ``cw_buffer_emit``, so it is neither quoted nor padded."""
 
-    def f(a: bool, gi: GameIter, box: Boxscore, v: Roster | None, h: Roster | None) -> str:
+    def f(buf: CWBuffer, gi: GameIter, box: Boxscore, v: Roster | None, h: Roster | None) -> int:
         tmp = _info(gi, key)
         if tmp is not None and tmp != "":
-            return _find_player_name(gi.game, tmp, v, h)
-        return '"(none)"'
+            return _find_player_name(gi.game, buf, tmp, v, h)
+        if quoted_none:
+            return buf.emit_string("(none)", 30)
+        return buf.emit("(none)")
 
     return f
 
 
 def _goahead_rbi_id(
-    a: bool, gi: GameIter, box: Boxscore, v: Roster | None, h: Roster | None
-) -> str:
-    return _quoted_or_padded(a, gi.state.go_ahead_rbi or "", 8)
+    buf: CWBuffer, gi: GameIter, box: Boxscore, v: Roster | None, h: Roster | None
+) -> int:
+    return buf.emit_string(gi.state.go_ahead_rbi or "", 8)
 
 
 def _goahead_rbi_name(
-    a: bool, gi: GameIter, box: Boxscore, v: Roster | None, h: Roster | None
-) -> str:
+    buf: CWBuffer, gi: GameIter, box: Boxscore, v: Roster | None, h: Roster | None
+) -> int:
     tmp = gi.state.go_ahead_rbi
     if tmp is not None and tmp != "":
-        return _find_player_name(gi.game, tmp, v, h)
-    return '"(none)"'
+        return _find_player_name(gi.game, buf, tmp, v, h)
+    return buf.emit_string("(none)", 30)
 
 
 def _lineup_name(team: int, slot: int) -> Field:
     """``cwgame_find_lineup_name``"""
 
-    def f(a: bool, gi: GameIter, box: Boxscore, v: Roster | None, h: Roster | None) -> str:
+    def f(buf: CWBuffer, gi: GameIter, box: Boxscore, v: Roster | None, h: Roster | None) -> int:
         starter = gi.game.starter_find(team, slot)
         if starter is not None:
-            return _find_player_name(gi.game, starter.player_id, v, h)
-        return "(null)"
+            return _find_player_name(gi.game, buf, starter.player_id, v, h)
+        return buf.emit_string("(null)", 30)
 
     return f
 
 
 def _additional_info(
-    a: bool, gi: GameIter, box: Boxscore, v: Roster | None, h: Roster | None
-) -> str:
+    buf: CWBuffer, gi: GameIter, box: Boxscore, v: Roster | None, h: Roster | None
+) -> int:
     htbf = _info(gi, "htbf")
-    return "HTBF" if htbf is not None and htbf == "true" else ""
+    return buf.emit_string("HTBF" if htbf is not None and htbf == "true" else "", 30)
 
 
 def _scheduled_innings(
-    a: bool, gi: GameIter, box: Boxscore, v: Roster | None, h: Roster | None
-) -> str:
+    buf: CWBuffer, gi: GameIter, box: Boxscore, v: Roster | None, h: Roster | None
+) -> int:
     tmp = _info(gi, "innings")
-    return tmp if tmp is not None else "9"
+    return buf.emit(tmp if tmp is not None else "9")
 
 
-def _tiebreaker(a: bool, gi: GameIter, box: Boxscore, v: Roster | None, h: Roster | None) -> str:
-    return f'"{_info(gi, "tiebreaker") or ""}"'
+def _tiebreaker(
+    buf: CWBuffer, gi: GameIter, box: Boxscore, v: Roster | None, h: Roster | None
+) -> int:
+    return buf.emit(f'"{_info(gi, "tiebreaker") or ""}"')
 
 
 _HOWSCORED = ((0, "unknown"), (1, "park"), (2, "tv"), (3, "radio"))
@@ -504,6 +644,7 @@ _WINDDIR = (
 _FIELDCOND = ((0, "unknown"), (1, "soaked"), (2, "wet"), (3, "damp"), (4, "dry"))
 _PRECIP = ((0, "unknown"), (1, "none"), (2, "drizzle"), (3, "showers"), (4, "rain"), (5, "snow"))
 _SKY = ((0, "unknown"), (1, "sunny"), (2, "cloudy"), (3, "overcast"), (4, "night"), (5, "dome"))
+
 
 FIELDS: tuple[tuple[Field | None, str, str], ...] = (
     (_game_id, "GAME_ID", "game id"),
@@ -550,7 +691,7 @@ FIELDS: tuple[tuple[Field | None, str, str], ...] = (
     (_lob(1), "HOME_LOB_CT", "home left on base"),
     (_info_text("wp", 8), "WIN_PIT_ID", "winning pitcher"),
     (_info_text("lp", 8), "LOSE_PIT_ID", "losing pitcher"),
-    (_info_text("save", 12), "SAVE_PIT_ID", "save for"),
+    (_info_text("save", 8), "SAVE_PIT_ID", "save for"),
     (_info_text("gwrbi", 8), "GWRBI_BAT_ID", "GW RBI"),
     (None, "AWAY_LINEUP1_BAT_ID", "visitor batter 1"),
     (None, "AWAY_LINEUP1_FLD_CD", "visitor position 1"),
@@ -590,18 +731,19 @@ FIELDS: tuple[tuple[Field | None, str, str], ...] = (
     (None, "HOME_LINEUP9_FLD_CD", "home position 9"),
     (None, "AWAY_FINISH_PIT_ID", "visiting finisher (NULL if complete game)"),
     (None, "HOME_FINISH_PIT_ID", "home finisher (NULL if complete game)"),
+    (_info_text("oscorer", 8), "OFFICIAL_SCORER_ID", "official scorer"),
     (_game_type, "GAME_TYPE_TX", "game type"),
 )
 
 EXT_FIELDS: tuple[tuple[Field | None, str, str], ...] = (
     (_league(0), "AWAY_TEAM_LEAGUE_ID", "visiting team league"),
     (_league(1), "HOME_TEAM_LEAGUE_ID", "home team league"),
-    (_empty, "AWAY_TEAM_GAME_CT", "visiting team game number"),
-    (_empty, "HOME_TEAM_GAME_CT", "home team game number"),
+    (_empty_string(3), "AWAY_TEAM_GAME_CT", "visiting team game number"),
+    (_empty_string(3), "HOME_TEAM_GAME_CT", "home team game number"),
     (_length_outs, "OUTS_CT", "length of game in outs"),
-    (_empty, "COMPLETION_TX", "information on completion of game"),
-    (_empty, "FORFEIT_TX", "information on forfeit of game"),
-    (_empty, "PROTEST_TX", "information on protest of game"),
+    (_empty_string(30), "COMPLETION_TX", "information on completion of game"),
+    (_empty_string(30), "FORFEIT_TX", "information on forfeit of game"),
+    (_protest_info, "PROTEST_TX", "information on protest of game"),
     (_line(0), "AWAY_LINE_TX", "visiting team linescore"),
     (_line(1), "HOME_LINE_TX", "home team linescore"),
     (_tabulated_batter(0, "ab"), "AWAY_AB_CT", "visiting team AB"),
@@ -654,19 +796,19 @@ EXT_FIELDS: tuple[tuple[Field | None, str, str], ...] = (
     (_tabulated_fielder(1, "pb", 2, 2), "HOME_PB_CT", "home team PB"),
     (_box_count("dp", 1), "HOME_DP_CT", "home team DP"),
     (_box_count("tp", 1), "HOME_TP_CT", "home team TP"),
-    (_empty, "UMP_HOME_NAME_TX", "home plate umpire name"),
-    (_empty, "UMP_1B_NAME_TX", "first base umpire name"),
-    (_empty, "UMP_2B_NAME_TX", "second base umpire name"),
-    (_empty, "UMP_3B_NAME_TX", "third base umpire name"),
-    (_empty, "UMP_LF_NAME_TX", "left field umpire name"),
-    (_empty, "UMP_RF_NAME_TX", "right field umpire name"),
-    (_empty, "AWAY_MANAGER_ID", "visitors manager ID"),
-    (_empty, "AWAY_MANAGER_NAME_TX", "visitors manager name"),
-    (_empty, "HOME_MANAGER_ID", "home manager ID"),
-    (_empty, "HOME_MANAGER_NAME_TX", "home manager name"),
+    (_empty_string(30), "UMP_HOME_NAME_TX", "home plate umpire name"),
+    (_empty_string(30), "UMP_1B_NAME_TX", "first base umpire name"),
+    (_empty_string(30), "UMP_2B_NAME_TX", "second base umpire name"),
+    (_empty_string(30), "UMP_3B_NAME_TX", "third base umpire name"),
+    (_empty_string(30), "UMP_LF_NAME_TX", "left field umpire name"),
+    (_empty_string(30), "UMP_RF_NAME_TX", "right field umpire name"),
+    (_empty_string(8), "AWAY_MANAGER_ID", "visitors manager ID"),
+    (_empty_string(30), "AWAY_MANAGER_NAME_TX", "visitors manager name"),
+    (_empty_string(8), "HOME_MANAGER_ID", "home manager ID"),
+    (_empty_string(30), "HOME_MANAGER_NAME_TX", "home manager name"),
     (_named("wp"), "WIN_PIT_NAME_TX", "winning pitcher name"),
     (_named("lp"), "LOSE_PIT_NAME_TX", "losing pitcher name"),
-    (_named("save"), "SAVE_PIT_NAME_TX", "save pitcher name"),
+    (_named("save", quoted_none=False), "SAVE_PIT_NAME_TX", "save pitcher name"),
     (_goahead_rbi_id, "GOAHEAD_RBI_ID", "batter with goahead RBI ID"),
     (_goahead_rbi_name, "GOAHEAD_RBI_NAME_TX", "batter with goahead RBI"),
     (_lineup_name(0, 1), "AWAY_LINEUP1_BAT_NAME_TX", "visitor batter 1 name"),
@@ -688,7 +830,7 @@ EXT_FIELDS: tuple[tuple[Field | None, str, str], ...] = (
     (_lineup_name(1, 8), "HOME_LINEUP8_BAT_NAME_TX", "home batter 8 name"),
     (_lineup_name(1, 9), "HOME_LINEUP9_BAT_NAME_TX", "home batter 9 name"),
     (_additional_info, "ADD_INFO_TX", "additional information"),
-    (_empty, "ACQ_INFO_TX", "acquisition information"),
+    (_empty_string(30), "ACQ_INFO_TX", "acquisition information"),
     (_scheduled_innings, "SCHED_INN_CT", "scheduled length of game in innings "),
     (_tiebreaker, "TIEBREAK_CD", "tiebreaker rule type in use"),
 )
@@ -704,6 +846,7 @@ def game_line(
     ascii_: bool,
     fields: Collection[int],
     ext_fields: Collection[int],
+    date_format: int = CWGAME_DATE_NOSLASH_FULL,
 ) -> str:
     """``cwgame_process_game``: the line describing one game"""
     box = box_create(game)
@@ -711,39 +854,50 @@ def game_line(
     while gi.event is not None:
         gi.next()
 
-    parts: list[str] = []
+    buf = CWBuffer(BUFFER_SIZE, ascii_)
     for i in range(46):
         if i in fields:
-            parts.append(_deref(FIELDS[i][0])(ascii_, gi, box, visitors, home))
+            if i == 1:
+                _date(buf, gi, box, visitors, home, date_format)
+            else:
+                _deref(FIELDS[i][0])(buf, gi, box, visitors, home)
     for t in range(2):
         for i in range(1, 10):
             for j in range(2):
                 if 46 + t * 18 + 2 * (i - 1) + j in fields:
-                    parts.append(
-                        starting_player(ascii_, game, t, i)
-                        if j == 0
-                        else starting_position(game, t, i)
-                    )
+                    if j == 0:
+                        starting_player(buf, game, t, i)
+                    else:
+                        starting_position(buf, game, t, i)
     for t, i in enumerate((82, 83)):
         if i in fields:
-            parts.append(final_pitcher(ascii_, box, t))
+            final_pitcher(buf, box, t)
     for i in range(84, MAX_FIELD + 1):
         if i in fields:
-            parts.append(_deref(FIELDS[i][0])(ascii_, gi, box, visitors, home))
+            _deref(FIELDS[i][0])(buf, gi, box, visitors, home)
     for i in range(MAX_EXT_FIELD + 1):
         if i in ext_fields:
-            parts.append(_deref(EXT_FIELDS[i][0])(ascii_, gi, box, visitors, home))
-    return cut_at_nul(("," if ascii_ else "").join(parts))
+            _deref(EXT_FIELDS[i][0])(buf, gi, box, visitors, home)
+    if buf.truncated:
+        raise BufferTruncated(f"Error: output buffer truncated for game {game.game_id}")
+    return cut_at_nul(buf.text())
 
 
 def header_line(fields: Collection[int], ext_fields: Collection[int]) -> str:
     """``cwgame_initialize`` with ``-n``: the field names, quoted and comma separated"""
-    names = [f'"{FIELDS[i][1]}"' for i in range(MAX_FIELD + 1) if i in fields]
-    names += [f'"{EXT_FIELDS[i][1]}"' for i in range(MAX_EXT_FIELD + 1) if i in ext_fields]
-    return ",".join(names)
+    buf = CWBuffer(BUFFER_SIZE, True)
+    for i in range(MAX_FIELD + 1):
+        if i in fields:
+            buf.emit(f'"{FIELDS[i][1]}"')
+    for i in range(MAX_EXT_FIELD + 1):
+        if i in ext_fields:
+            buf.emit(f'"{EXT_FIELDS[i][1]}"')
+    if buf.truncated:
+        raise BufferTruncated("Error: output buffer truncated while generating header")
+    return buf.text()
 
 
-DEFAULT_FIELDS = tuple(range(84))
+DEFAULT_FIELDS = tuple(range(85))
 
 
 def game_lines(
@@ -755,7 +909,8 @@ def game_lines(
     ascii_: bool = True,
     fields: Collection[int] = DEFAULT_FIELDS,
     ext_fields: Collection[int] = (),
+    date_format: int = CWGAME_DATE_NOSLASH_FULL,
 ) -> Iterator[str]:
     """Lines for the selected games of an event file, as ``cwgame`` prints them."""
     for game, visitors, home in iterate_games(data, league, game_id, first_date, last_date):
-        yield game_line(game, visitors, home, ascii_, fields, ext_fields)
+        yield game_line(game, visitors, home, ascii_, fields, ext_fields, date_format)

@@ -66,6 +66,7 @@ class Options:
     use_xml: bool = False
     use_sportsml: bool = False
     jobs: int | None = None
+    date_format: int = cwgame.CWGAME_DATE_NOSLASH_FULL  # cwgame -dsf, -dsp, -dnf, -dnp
 
 
 @dataclass
@@ -164,6 +165,14 @@ def parse_field_list(text: str, maxfield: int, io: IO, program_name: str) -> set
     return chosen
 
 
+_DATE_SWITCHES = {
+    "-dsf": cwgame.CWGAME_DATE_SLASH_FULL,
+    "-dsp": cwgame.CWGAME_DATE_SLASH_PARTIAL,
+    "-dnf": cwgame.CWGAME_DATE_NOSLASH_FULL,
+    "-dnp": cwgame.CWGAME_DATE_NOSLASH_PARTIAL,
+}
+
+
 def parse_command_line(tool: Tool, argv: list[str], opts: Options, io: IO) -> int:
     """``<tool>_parse_command_line``: returns the index of the first file argument"""
     opts.year = ""
@@ -176,6 +185,8 @@ def parse_command_line(tool: Tool, argv: list[str], opts: Options, io: IO) -> in
             io.err(welcome_message(tool, argv[0]))
             io.err(tool.field_list())
             raise Exit(0)
+        elif arg in _DATE_SWITCHES and tool.name == "cwgame":
+            opts.date_format = _DATE_SWITCHES[arg]
         elif arg == "-D":
             i += 1
             if i < len(argv):
@@ -584,7 +595,12 @@ def _event_process(o: Options, io: IO, g: Game, v: Roster | None, h: Roster | No
 
 
 def _game_process(o: Options, io: IO, g: Game, v: Roster | None, h: Roster | None) -> None:
-    io.out(cwgame.game_line(g, v, h, o.ascii, o.fields, o.ext_fields) + "\n")
+    try:
+        line = cwgame.game_line(g, v, h, o.ascii, o.fields, o.ext_fields, o.date_format)
+    except cwgame.BufferTruncated as e:
+        io.err(f"{e}\n")  # the C prints this and calls exit(1)
+        raise ReportedError(str(e)) from e
+    io.out(line + "\n")
 
 
 def _daily_process(o: Options, io: IO, g: Game, v: Roster | None, h: Roster | None) -> None:
@@ -652,10 +668,15 @@ CWGAME = Tool(
         *_COMMON_HELP,
         *_FORMAT_HELP,
         "  -f flist  give list of fields to output\n",
-        "              Default is 0-83\n",
+        "              Default is 0-84\n",
         "  -x flist  give list of extended fields to output\n",
         "              Default is none\n",
         "  -d        print list of field numbers and descriptions\n",
+        "  The -dxx switches choose a date format for the gamedate field.\n",
+        "  -dsf      slashes, full year: mm/dd/yyyy\n",
+        "  -dsp      slashes, partial year: mm/dd/yy\n",
+        "  -dnf      no slashes, full year: yyyymmdd (the default)\n",
+        "  -dnp      no slashes, partial year: yymmdd\n",
         _QUIET_HELP,
         _NAMES_HELP,
     ),

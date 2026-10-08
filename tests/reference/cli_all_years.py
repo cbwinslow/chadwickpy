@@ -40,7 +40,7 @@ OPTION_SETS: dict[str, tuple[str, list[str]]] = {
     "cwevent fixed June": ("cwevent", ["-ft", "-s", "0601", "-e", "0630"]),
     "cwevent quiet fields": ("cwevent", ["-Q", "-f", "0,1,2,3,4,5,6,13,14,26,29,34"]),
     "cwgame default": ("cwgame", []),
-    "cwgame all": ("cwgame", ["-n", "-f", "0-84", "-x", "0-96"]),
+    "cwgame all": ("cwgame", ["-n", "-f", "0-85", "-x", "0-96"]),
     "cwgame fixed": ("cwgame", ["-ft", "-Q"]),
     "cwdaily default": ("cwdaily", []),
     "cwdaily ascii": ("cwdaily", ["-n"]),

@@ -23,15 +23,15 @@ from chadwickpy.tools.tools import read_rosters  # noqa: E402
 pytestmark = pytest.mark.skipif(real_tool("cwgame") is None, reason="needs cwgame on PATH")
 
 FIXTURES = sorted((HERE / "fixtures" / "events").glob("*.evt"))
-ALL = tuple(range(85))
+ALL = tuple(range(86))
 EXT = tuple(range(97))
 
 # name: (cwgame arguments, ascii, fields, extended fields)
 VARIANTS = {
-    "ascii_default": (["-n"], True, tuple(range(84)), ()),
-    "fixed_default": (["-ft"], False, tuple(range(84)), ()),
-    "ascii_all": (["-n", "-f", "0-84", "-x", "0-96"], True, ALL, EXT),
-    "fixed_all": (["-ft", "-f", "0-84", "-x", "0-96"], False, ALL, EXT),
+    "ascii_default": (["-n"], True, tuple(range(85)), ()),
+    "fixed_default": (["-ft"], False, tuple(range(85)), ()),
+    "ascii_all": (["-n", "-f", "0-85", "-x", "0-96"], True, ALL, EXT),
+    "fixed_all": (["-ft", "-f", "0-85", "-x", "0-96"], False, ALL, EXT),
 }
 
 

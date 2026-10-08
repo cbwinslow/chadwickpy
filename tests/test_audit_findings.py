@@ -95,7 +95,7 @@ def run_both(tmp_path: Path, tool: str, text: str, flags: list[str], name: str =
 
 FLAGS = {
     "cwevent": ["-n", "-f", "0-96", "-x", "0-66"],
-    "cwgame": ["-n", "-f", "0-84", "-x", "0-96"],
+    "cwgame": ["-n", "-f", "0-85", "-x", "0-96"],
     "cwdaily": ["-n", "-f", "0-153"],
 }
 
