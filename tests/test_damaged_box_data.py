@@ -5,6 +5,7 @@ spreadsheet fractions (``0.375``). The 0.10 C tools survived the first two by in
 starter with no position. The port matches the error, and reports an error where the C crashes
 (ADR-003). The tests compare it with the real C tools (skipped without them)."""
 
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -110,10 +111,19 @@ def test_matches_the_c_tools(tmp_path: Path, tool: str, case: str) -> None:
     if c[0] < 0:
         # Chadwick 0.11.0 reads a CR LF file the same as an LF one, so a final empty field (the
         # starter's position) is no longer kept and the record is dropped; the C then
-        # dereferences a missing starter and is killed by a signal. The port reports an error
-        # (ADR-003), writing nothing.
+        # dereferences a missing starter and is killed by a signal. Its stdout is block-buffered
+        # when piped, so the first header row (not cwbox) is lost with the process; unbuffered it
+        # is there. The port stops with an error (ADR-003) after writing the same header.
         assert p[0] != 0
-        assert not p[1]
+        if shutil.which("stdbuf") is None:
+            pytest.skip("stdbuf is needed to see what the crashing C tool wrote before it died")
+        unbuffered = ["stdbuf", "-o0", real_tool(tool) or "", "-Q", "-y", str(YEAR), *FLAGS[tool]]
+        u = subprocess.run(
+            [*unbuffered, f"{YEAR}.EBR"], cwd=tmp_path / "w", capture_output=True, check=False
+        )
+        assert u.returncode < 0
+        assert u.stdout.count(b"\n") == (0 if tool == "cwbox" else 1)  # cwbox has no header row
+        assert p[1] == u.stdout
     else:
         # 0.11.0 validates a dline's team, sequence and position: "?" and "NA" read as -1, and
         # the tool exits with status 1 and an error message (ce175ee)

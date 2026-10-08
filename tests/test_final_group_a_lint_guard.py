@@ -83,9 +83,17 @@ def test_guard_reports_an_empty_file() -> None:
 
 
 def test_guard_reports_an_id_record_that_did_not_become_a_game() -> None:
-    # the last id line has no newline: the reader does not take it as a game
-    problems = check_event_file(b"id,A\n" + DATE + b"id,B")
+    # an id record with no game id: the reader stops there (0.11.0 still reads a last line
+    # without a newline, so that no longer makes a record disappear)
+    problems = check_event_file(b"id,A\n" + DATE + b"id,\n" + DATE)
     assert problems == ["2 id records but 1 games were read"]
+
+
+def test_guard_reports_a_game_the_c_tools_cannot_iterate() -> None:
+    # the last id line has no newline but is read as a game (0.11.0); it has no date record,
+    # which makes the C tools crash
+    problems = check_event_file(b"id,A\n" + DATE + b"id,B")
+    assert problems == ["B: game has no date info record (Chadwick would crash)"]
 
 
 def test_guard_accepts_a_clean_file() -> None:
