@@ -76,8 +76,10 @@ def build_sanitised(
         "-g",
         "-O0",
         "-w",
-        '-DVERSION="0.10.0"',
+        '-DVERSION="0.11.0"',
         "-DHAVE_STRUCT_TM_TM_GMTOFF",
+        "-fgnu89-inline",  # 0.11.0 cwevent.c/cwdaily.c use plain `inline` helpers; at -O0 under
+        # C99 semantics that emits no out-of-line copy and the link fails
         "-fsanitize=address,undefined",
     ]
     cmd += ["-I", str(SRC), "-I", str(SRC / "cwlib"), "-I", str(SRC / "cwtools")]
