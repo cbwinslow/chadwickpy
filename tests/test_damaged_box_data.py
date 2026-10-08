@@ -1,9 +1,9 @@
-"""Retrosheet's box-score-only files (Negro Leagues, 1930s-40s) contain damaged records that the C
-tools survive: a starter with no position, a ``dline`` with ``?`` or ``NA`` for a number, and start
-times written as spreadsheet fractions (``0.375``). The C does not check these values; it indexes
-arrays with -1 (which lands inside the same struct) and prints stack leftovers. The port reproduces
-what the C does, and these tests compare it with the real C tools (skipped without them) and pin the
-values observed there."""
+"""Retrosheet's box-score-only files (Negro Leagues, 1930s-40s) contain damaged records: a starter
+with no position, a ``dline`` with ``?`` or ``NA`` for a number, and start times written as
+spreadsheet fractions (``0.375``). The 0.10 C tools survived the first two by indexing arrays with
+-1; Chadwick 0.11.0 rejects a bad ``dline`` with an error (exit status 1) and crashes on the
+starter with no position. The port matches the error, and reports an error where the C crashes
+(ADR-003). The tests compare it with the real C tools (skipped without them)."""
 
 import subprocess
 import sys
@@ -107,8 +107,18 @@ def test_matches_the_c_tools(tmp_path: Path, tool: str, case: str) -> None:
     if real_tool(tool) is None:
         pytest.skip("the real Chadwick tools are not installed (set CHADWICK_BIN)")
     c, p = run_both(tmp_path, tool, box_game(**CASES[case]), FLAGS[tool])
-    assert c[0] == 0, "the C tool should handle this game"
-    assert p == c
+    if c[0] < 0:
+        # Chadwick 0.11.0 reads a CR LF file the same as an LF one, so a final empty field (the
+        # starter's position) is no longer kept and the record is dropped; the C then
+        # dereferences a missing starter and is killed by a signal. The port reports an error
+        # (ADR-003), writing nothing.
+        assert p[0] != 0
+        assert not p[1]
+    else:
+        # 0.11.0 validates a dline's team, sequence and position: "?" and "NA" read as -1, and
+        # the tool exits with status 1 and an error message (ce175ee)
+        assert c[0] in (0, 1), "the C tool should handle this game or reject it with an error"
+        assert p == c
 
 
 # What the C prints, observed on Retrosheet's 1947 Negro Leagues file (no C needed to check these).

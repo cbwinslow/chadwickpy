@@ -133,7 +133,11 @@ def test_a_fatal_error_the_c_reports_is_reported_once(tmp_path: Path, tool: str)
     text = box_game_missing_player_field()
     c, p = run_both(tmp_path, tool, text, [] if tool == "cwbox" else FLAGS[tool], "g.EBR")
     assert (p.returncode, p.stdout, p.stderr) == (c.returncode, c.stdout, c.stderr)
-    assert b"(null)" in c.stderr
+    if tool == "cwbox":
+        # 0.11.0 validates the dline team (-1 for the missing field) before it looks for the player
+        assert b"invalid team -1 in dline record" in c.stderr
+    else:
+        assert b"(null)" in c.stderr
 
 
 def test_a_player_removed_for_a_pinch_hitter_with_an_empty_id_still_counts_as_removed(
