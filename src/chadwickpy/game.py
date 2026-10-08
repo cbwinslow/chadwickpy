@@ -319,7 +319,9 @@ def read_game(file: CFile) -> Game | None:
                     ev = _need_event(last, line)
                     ev.pitcher_hand = pit_hand
                     ev.pitcher_hand_id = pit_hand_pitcher
-                    pit_hand, pit_hand_pitcher = " ", ""
+                    if p_play != "NP":
+                        # padj applies to the next non-NP play
+                        pit_hand, pit_hand_pitcher = " ", ""
                 if ladj_slot != 0:
                     ev = _need_event(last, line)
                     ev.ladj_align = ladj_align
@@ -384,7 +386,11 @@ def read_game(file: CFile) -> Game | None:
                 ev = _need_event(last, line)
                 ev.pitcher_hand = pit_hand
                 ev.pitcher_hand_id = pit_hand_pitcher
-                pit_hand, pit_hand_pitcher = " ", ""
+                if play is None:
+                    raise ValueError(f"play record with no play field (Chadwick would crash): {line!r}")
+                if play != "NP":
+                    # padj applies to the next non-NP play
+                    pit_hand, pit_hand_pitcher = " ", ""
             if ladj_slot != 0:
                 ev = _need_event(last, line)
                 ev.ladj_align = ladj_align
@@ -411,6 +417,10 @@ def read_game(file: CFile) -> Game | None:
                 _need_event(game.events[-1] if game.events else None, line).subs.append(
                     Appearance(pid, name, team_n, slot_n, pos_n)
                 )
+                if pos_n == 1 and pit_hand != " " and pid != pit_hand_pitcher:
+                    # A pending padj is for the pitcher being relieved, so it no longer applies
+                    # once a different pitcher takes the mound.
+                    pit_hand, pit_hand_pitcher = " ", ""
         elif rtype == "com":
             comment = tok(None)
             if comment is not None:
