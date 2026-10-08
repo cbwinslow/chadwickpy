@@ -84,7 +84,7 @@ def run_both(tmp_path: Path, tool: str, text: str, flags: list[str], name: str =
     folder.mkdir(exist_ok=True)
     (folder / name).write_bytes(text.encode("latin-1"))
     (folder / f"TEAM{YEAR}").write_text("")
-    args = ["-q", "-y", str(YEAR), *flags]
+    args = ["-Q", "-y", str(YEAR), *flags]
     c = subprocess.run([exe, *args, name], cwd=folder, capture_output=True, check=False)
     p = subprocess.run(
         [sys.executable, "-m", "chadwickpy", tool, *args, "-j", "1", name],

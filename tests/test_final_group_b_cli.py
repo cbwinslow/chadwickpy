@@ -42,7 +42,7 @@ def scratch(tmp: Path) -> Path:
 
 
 def args(tool: str) -> list[str]:
-    return ["-q", "-y", str(YEAR), *([] if tool == "cwbox" else FLAGS[tool]), NAME]
+    return ["-Q", "-y", str(YEAR), *([] if tool == "cwbox" else FLAGS[tool]), NAME]
 
 
 @needs_tools
@@ -113,7 +113,7 @@ def test_missing_catcher_message_prints_null(tmp_path: Path, name: str) -> None:
         d.mkdir()
         (d / NAME).write_bytes(text.encode("latin-1"))
         (d / "TEAM2020").write_text("")
-    a = ["-q", "-y", "2020", "-n", NAME]
+    a = ["-Q", "-y", "2020", "-n", NAME]
     real = run_real("cwgame", a, real_dir)
     port = run_port("cwgame", a, port_dir)
     assert b"(null)" in real[2]

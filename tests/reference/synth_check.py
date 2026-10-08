@@ -82,7 +82,7 @@ def one(
         for name, content in support.items():
             (work / name).write_bytes(content)
         for tool, args in CASES:
-            argv = ["-q", "-y", str(YEAR), *args, f"{YEAR}XXX.EVN"]
+            argv = ["-Q", "-y", str(YEAR), *args, f"{YEAR}XXX.EVN"]
             real = run([_real(tool), *argv], work)
             port_cmd = [sys.executable, "-m", "chadwickpy", tool, *argv]
             if cov:

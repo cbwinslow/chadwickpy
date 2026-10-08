@@ -14,7 +14,7 @@ def test_closed_pipe_prints_no_traceback(tmp_path):
     event_file = tmp_path / "2007TST.EVA"
     event_file.write_bytes((HERE / "fixtures" / "events" / "regular_2007.evt").read_bytes())
     proc = subprocess.Popen(
-        [sys.executable, "-m", "chadwickpy", "cwevent", "-q", "-y", "2007", str(event_file)],
+        [sys.executable, "-m", "chadwickpy", "cwevent", "-Q", "-y", "2007", str(event_file)],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         cwd=tmp_path,

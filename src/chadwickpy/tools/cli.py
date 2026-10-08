@@ -37,7 +37,7 @@ from chadwickpy.tools.cwbox import process_game as box_process_game
 from chadwickpy.tools.tools import read_rosters, select_game
 from chadwickpy.xmlwrite import XMLDoc, xml_document_cleanup
 
-VERSION = "0.10.0"
+VERSION = "0.11.0"
 log = logging.getLogger("chadwickpy")
 
 
@@ -59,6 +59,7 @@ class Options:
     first_date: str = "0101"
     last_date: str = "1231"
     game_id: str = ""
+    data_dir: str = ""  # -D: where TEAMyyyy and the roster files are (empty: current directory)
     ascii: bool = True
     quiet: bool = False
     print_header: bool = False
@@ -101,7 +102,7 @@ def welcome_message(tool: Tool, argv0: str) -> str:
     return (
         f"\n{tool.title}, version {VERSION}"
         f"\n  Type '{argv0} -h' for help.\n"
-        "Copyright (c) 2002-2023\nDr T L Turocy, Chadwick Baseball Bureau (ted.turocy@gmail.com)\n"
+        "Copyright (c) 2002-2026\nDr T L Turocy, Chadwick Baseball Bureau (ted.turocy@gmail.com)\n"
         "This is free software, subject to the terms of the GNU GPL license.\n\n"
     )
 
@@ -175,6 +176,10 @@ def parse_command_line(tool: Tool, argv: list[str], opts: Options, io: IO) -> in
             io.err(welcome_message(tool, argv[0]))
             io.err(tool.field_list())
             raise Exit(0)
+        elif arg == "-D":
+            i += 1
+            if i < len(argv):
+                opts.data_dir = argv[i][:1023]
         elif arg == "-e":
             i += 1
             if i < len(argv):
@@ -183,7 +188,7 @@ def parse_command_line(tool: Tool, argv: list[str], opts: Options, io: IO) -> in
             io.err(welcome_message(tool, argv[0]))
             io.err("".join(tool.help_lines))
             raise Exit(0)
-        elif arg == "-q":
+        elif arg == "-Q":
             opts.quiet = True
         elif arg == "-i":
             i += 1
@@ -240,16 +245,24 @@ def parse_command_line(tool: Tool, argv: list[str], opts: Options, io: IO) -> in
 
 def read_team_rosters(opts: Options, io: IO) -> League:
     """``cwtools_read_rosters``: ``TEAMyyyy`` (else ``teamyyyy``) and the ``.ROS`` files"""
-    filename = f"TEAM{opts.year}"
+    filename = _build_path(opts.data_dir, f"TEAM{opts.year}")
     team_file = _read(filename)
     if team_file is None:
         # Also try lowercase version
-        filename = f"team{opts.year}"
+        filename = _build_path(opts.data_dir, f"team{opts.year}")
         team_file = _read(filename)
         if team_file is None:
             io.err(f"Can't find teamfile ({filename})\n")
             raise Exit(1)
-    return read_rosters(team_file, opts.year, _read)
+    return read_rosters(team_file, opts.year, lambda name: _read(_build_path(opts.data_dir, name)))
+
+
+def _build_path(data_dir: str, filename: str) -> str:
+    """``cwtools_build_path``: ``-D`` directory (and a ``/`` unless it already ends in one) in
+    front of ``filename``; the file name alone when no directory was given"""
+    if not data_dir:
+        return filename
+    return data_dir + ("" if data_dir.endswith("/") else "/") + filename
 
 
 def _read(filename: str) -> bytes | None:
@@ -543,6 +556,7 @@ _COMMON_HELP = (
     "  -h        print this help\n",
     "  -i id     only process game given by id\n",
     "  -y year   Year to process (for teamyyyy and aaayyyy.ros).\n",
+    "  -D dir    Directory to find team and roster files (default is current directory)\n",
     "  -s start  Earliest date to process (mmdd).\n",
     "  -e end    Last date to process (mmdd).\n",
 )
@@ -550,7 +564,7 @@ _FORMAT_HELP = (
     "  -a        generate Ascii-delimited format files (default)\n",
     "  -ft       generate Fortran format files\n",
 )
-_QUIET_HELP = "  -q        operate quietly; do not output progress messages\n"
+_QUIET_HELP = "  -Q        operate quietly; do not output progress messages\n"
 _NAMES_HELP = "  -n        print field names in first row of output\n\n"
 
 

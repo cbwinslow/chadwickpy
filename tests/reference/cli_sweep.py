@@ -33,7 +33,7 @@ from cli_all_years import EVENT, PB, run, seasons  # noqa: E402
 FIELDS = ["0", "0-3", "3,1,2", "0-96", "5-2", "999", "1,,2", "x", "", "-1", "0-"]
 DATES = ["0601", "0630", "0101", "1231", "13", "abc", "", "00000", "0229"]
 COMMON: list[tuple[str, bool, list[str]]] = [
-    ("-q", False, []),
+    ("-Q", False, []),
     ("-a", False, []),
     ("-ft", False, []),
     ("-s", True, DATES),
@@ -49,7 +49,7 @@ OPTIONS: dict[str, list[tuple[str, bool, list[str]]]] = {
     "cwcomment": [*COMMON, ("-n", False, [])],
     "cwbox": [*COMMON, ("-X", False, [])],
 }
-STANDALONE = [["-h"], ["-d"], ["-z"], ["-"], ["--help"], ["-hq"], ["-d", "-q"], ["-q", "-h"]]
+STANDALONE = [["-h"], ["-d"], ["-z"], ["-"], ["--help"], ["-hq"], ["-d", "-Q"], ["-Q", "-h"]]
 
 
 def cases(tool: str, rng: random.Random, n_random: int) -> list[list[str]]:

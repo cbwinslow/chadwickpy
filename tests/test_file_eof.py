@@ -65,6 +65,6 @@ def test_a_comment_on_the_last_line_is_not_lost(tmp_path: Path, monkeypatch) -> 
     monkeypatch.chdir(tmp_path)
     out: list[str] = []
     main(
-        TOOLS["cwcomment"], ["cwcomment", "-q", "-y", "2007", str(path)], IO(out.append, [].append)
+        TOOLS["cwcomment"], ["cwcomment", "-Q", "-y", "2007", str(path)], IO(out.append, [].append)
     )
     assert "first second last" in "".join(out)

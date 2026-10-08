@@ -28,7 +28,7 @@ from test_event_option_sweep import FILES, SELECTIONS  # noqa: E402
 
 PB = re.compile(rb' pb="\d+"')
 OUTPUT = {"text": [], "xml": ["-X"]}
-QUIET = {"quiet": ["-q"], "chatty": []}
+QUIET = {"quiet": ["-Q"], "chatty": []}
 
 CASES = list(itertools.product(SELECTIONS, OUTPUT, QUIET, FILES))
 

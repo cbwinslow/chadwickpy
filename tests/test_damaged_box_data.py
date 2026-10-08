@@ -92,7 +92,7 @@ def run_both(
     name = f"{YEAR}.EBR"
     (folder / name).write_bytes(text.encode("latin-1"))
     (folder / f"TEAM{YEAR}").write_text("")
-    args = ["-q", "-y", str(YEAR), *flags, name]
+    args = ["-Q", "-y", str(YEAR), *flags, name]
     c = subprocess.run([real_tool(tool) or "", *args], cwd=folder, capture_output=True, check=False)
     p = subprocess.run(
         [sys.executable, "-m", "chadwickpy", tool, *args, "-j", "1"],
@@ -123,7 +123,7 @@ def test_start_time_without_a_colon_prints_the_year_left_over_in_min(
     (folder / f"{YEAR}.EBR").write_bytes(box_game(starttime=starttime).encode())
     (folder / f"TEAM{YEAR}").write_text("")
     done = subprocess.run(
-        [sys.executable, "-m", "chadwickpy", "cwgame", "-q", "-y", str(YEAR), "-n", "-f", "0-5",
+        [sys.executable, "-m", "chadwickpy", "cwgame", "-Q", "-y", str(YEAR), "-n", "-f", "0-5",
          "-j", "1", f"{YEAR}.EBR"],
         cwd=folder, capture_output=True, check=True,
     )  # fmt: skip
@@ -139,7 +139,7 @@ def test_start_time_without_a_colon_and_without_the_day_field_is_refused(tmp_pat
     (folder / f"{YEAR}.EBR").write_bytes(box_game(starttime="0.375").encode())
     (folder / f"TEAM{YEAR}").write_text("")
     done = subprocess.run(
-        [sys.executable, "-m", "chadwickpy", "cwgame", "-q", "-y", str(YEAR), "-f", "4",
+        [sys.executable, "-m", "chadwickpy", "cwgame", "-Q", "-y", str(YEAR), "-f", "4",
          f"{YEAR}.EBR"],
         cwd=folder, capture_output=True, check=False,
     )  # fmt: skip
