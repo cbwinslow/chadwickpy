@@ -1,4 +1,4 @@
-"""``CFile.fgets`` must follow C's ``fgets``/``feof`` rules exactly, including at the last line."""
+"""``CFile.getline`` follows the 0.11.0 record reader and C's ``feof`` rules at the last line."""
 
 import random
 from pathlib import Path
@@ -7,51 +7,55 @@ from chadwickpy.file import CFile
 from chadwickpy.tools.cli import IO, TOOLS, main
 
 
-class _ReferenceFile:
-    """The byte-at-a-time loop the optimised ``fgets`` replaced: slow but plainly C's rule."""
+class _ReferenceReader:
+    """``cw_getline`` of Chadwick 0.11.0, one ``fgetc`` at a time"""
 
     def __init__(self, data: bytes) -> None:
         self._data, self.pos, self.eof = data, 0, False
 
-    def fgets(self, size: int) -> str | None:
-        data, pos = self._data, self.pos
-        if pos >= len(data):
-            self.eof = True
-            return None
-        want, end = size - 1, pos
-        while end - pos < want:
-            if end >= len(data):
+    def getline(self) -> str | None:
+        out = bytearray()
+        while True:
+            if self.pos >= len(self._data):
                 self.eof = True
                 break
-            end += 1
-            if data[end - 1] == 0x0A:
-                break
-        self.pos = end
-        return data[pos:end].decode("latin-1")
+            c = self._data[self.pos]
+            self.pos += 1
+            if c == 0x0A:
+                return out.decode("latin-1")
+            if c != 0x0D:
+                out.append(c)
+        return out.decode("latin-1") if out else None
 
 
 def test_eof_is_not_set_by_a_final_line_that_ends_in_a_newline() -> None:
     f = CFile(b"a\nb\n")
-    assert f.fgets(100) == "a\n" and not f.eof
-    assert f.fgets(100) == "b\n" and not f.eof  # C: feof is still false here
-    assert f.fgets(100) is None and f.eof
+    assert f.getline() == "a" and not f.eof
+    assert f.getline() == "b" and not f.eof  # C: feof is still false here
+    assert f.getline() is None and f.eof
 
 
-def test_eof_is_set_by_a_final_line_without_a_newline() -> None:
+def test_a_final_line_without_a_newline_is_read_and_sets_eof() -> None:
     f = CFile(b"a\nb")
-    assert f.fgets(100) == "a\n" and not f.eof
-    assert f.fgets(100) == "b" and f.eof
+    assert f.getline() == "a" and not f.eof
+    assert f.getline() == "b" and f.eof
+    assert f.getline() is None
+
+
+def test_every_carriage_return_is_dropped_and_long_lines_are_whole() -> None:
+    f = CFile(b"a\rb\r\n" + b"x" * 5000 + b"\r")
+    assert f.getline() == "ab"
+    assert f.getline() == "x" * 5000
 
 
 def test_matches_the_reference_on_random_input() -> None:
     rng = random.Random(1998)
     for _ in range(3000):
         data = bytes(rng.choice(b"ab,\r\n") for _ in range(rng.randrange(0, 40)))
-        size = rng.randrange(1, 12)
-        new, ref = CFile(data), _ReferenceFile(data)
+        new, ref = CFile(data), _ReferenceReader(data)
         for _ in range(len(data) + 3):
-            assert new.fgets(size) == ref.fgets(size), (data, size)
-            assert new.eof == ref.eof, (data, size)
+            assert new.getline() == ref.getline(), data
+            assert new.eof == ref.eof, data
 
 
 def test_a_comment_on_the_last_line_is_not_lost(tmp_path: Path, monkeypatch) -> None:  # type: ignore[no-untyped-def]

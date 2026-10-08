@@ -5,7 +5,7 @@ import random
 
 import pytest
 
-from chadwickpy.file import StrTok, cw_atoi
+from chadwickpy.file import Tokenizer, cw_atoi
 from chadwickpy.game import read_games
 
 
@@ -16,7 +16,7 @@ def _read_play(line: str):  # type: ignore[no-untyped-def]
 
 
 def _tokens(line: str) -> list[str]:
-    tok, out = StrTok(), []
+    tok, out = Tokenizer(), []
     t = tok(line)
     while t is not None:
         out.append(t)

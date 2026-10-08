@@ -28,7 +28,7 @@ from test_event_option_sweep import FILES, FORMATS, SELECTIONS  # noqa: E402
 FIELDS = {
     "cwgame": {"std": [], "low": ["-f", "0-5"], "all": ["-f", "0-85", "-x", "0-96"]},
     "cwdaily": {"std": [], "low": ["-f", "0-5"], "all": ["-f", "0-153"]},
-    "cwsub": {"std": [], "low": ["-f", "0-5"], "all": ["-f", "0-24"]},
+    "cwsub": {"std": [], "low": ["-f", "0-5"], "all": ["-f", "0-25"]},
     "cwcomment": {"std": [], "low": ["-f", "0-3"], "all": ["-f", "0-9"]},
 }
 

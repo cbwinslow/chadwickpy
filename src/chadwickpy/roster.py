@@ -1,6 +1,6 @@
 """Port of Chadwick's ``src/cwlib/roster.c`` and ``league.c`` (reading side).
 
-Chadwick is Copyright (c) 2002-2023 Dr T L Turocy and the Chadwick Baseball
+Chadwick is Copyright (c) 2002-2026 Dr T L Turocy and the Chadwick Baseball
 Bureau, licensed GPL-2.0-or-later; this module is a derivative of it and keeps
 that notice.
 
@@ -11,9 +11,7 @@ throwing hands, which ``cwevent`` prints for players without a ``badj``/``padj``
 
 from dataclasses import dataclass, field
 
-from chadwickpy.file import CFile, StrTok
-
-ROSTER_BUFSIZE = 256  # ``char buf[256]`` in ``cw_roster_read`` and ``cw_league_read``
+from chadwickpy.file import CFile, Tokenizer
 
 
 @dataclass
@@ -85,11 +83,8 @@ class Roster:
     def read(self, data: bytes) -> None:
         """``cw_roster_read``: append the players of a ``.ROS`` file's contents"""
         file = CFile(data)
-        tok = StrTok()
-        while not file.eof:
-            buf = file.fgets(ROSTER_BUFSIZE)
-            if buf is None:
-                return
+        tok = Tokenizer()
+        while (buf := file.getline()) is not None:
             player_id = tok(buf)
             last_name = tok(None)
             first_name = tok(None)
@@ -146,11 +141,8 @@ class League:
     def read(self, data: bytes) -> None:
         """``cw_league_read``: append a roster per line of a ``TEAMyyyy`` file's contents"""
         file = CFile(data)
-        tok = StrTok()
-        while not file.eof:
-            buf = file.fgets(ROSTER_BUFSIZE)
-            if buf is None:
-                return
+        tok = Tokenizer()
+        while (buf := file.getline()) is not None:
             team_id = tok(buf)
             league = tok(None)
             city = tok(None)

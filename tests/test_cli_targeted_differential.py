@@ -188,6 +188,59 @@ def test_missing_roster_files(tmp_path: Path, tool: str) -> None:
     check(tool, ["-Q", "-y", "2007", "-n", "a.evt"], tmp_path, remove)
 
 
+def _into_data_dir(work: Path, lower_team: bool = False) -> None:
+    """Move the team and roster files into ``work/data``, leaving only the event files here."""
+    data = work / "data"
+    data.mkdir()
+    for path in [*work.glob("TEAM*"), *work.glob("*.ROS")]:
+        path.rename(data / path.name)
+    if lower_team:
+        (data / "TEAM2007").rename(data / "team2007")
+
+
+DATA_DIR_ARGS = {
+    "no_slash": ["-D", "data"],
+    "trailing_slash": ["-D", "data/"],
+    "absent_directory": ["-D", "nowhere"],
+    "dot_slash": ["-D", "./data"],
+    "before_other_options": ["-Q", "-n", "-D", "data"],
+}
+
+
+@pytest.mark.parametrize("case", DATA_DIR_ARGS)
+@pytest.mark.parametrize("tool", ALL_TOOLS)
+def test_data_dir_finds_team_and_roster_files(tmp_path: Path, tool: str, case: str) -> None:
+    """``-D dir``: TEAMyyyy and the rosters come from ``dir``, with or without a trailing slash;
+    an absent directory gives Chadwick's own missing-team-file error."""
+    args = [*DATA_DIR_ARGS[case], "-Q", "-y", "2007", "-n", "a.evt"]
+    check(tool, args, tmp_path, _into_data_dir)
+
+
+@pytest.mark.parametrize("tool", ALL_TOOLS)
+def test_data_dir_with_lowercase_team_file(tmp_path: Path, tool: str) -> None:
+    check(
+        tool,
+        ["-D", "data", "-Q", "-y", "2007", "-n", "a.evt"],
+        tmp_path,
+        lambda work: _into_data_dir(work, lower_team=True),
+    )
+
+
+@pytest.mark.parametrize("tool", ALL_TOOLS)
+def test_data_dir_without_the_files_there(tmp_path: Path, tool: str) -> None:
+    """Files in the current directory are not found once ``-D`` names another one."""
+
+    def empty_data(work: Path) -> None:
+        (work / "data").mkdir()
+
+    check(tool, ["-D", "data", "-Q", "-y", "2007", "a.evt"], tmp_path, empty_data)
+
+
+@pytest.mark.parametrize("tool", ALL_TOOLS)
+def test_data_dir_missing_argument(tmp_path: Path, tool: str) -> None:
+    check(tool, ["-Q", "-y", "2007", "a.evt", "-D"], tmp_path)
+
+
 # --- port-only: the C tools have no -j/--jobs (they print "Invalid option '-j'") ---------------
 
 

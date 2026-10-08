@@ -11,7 +11,7 @@ import logging
 from collections.abc import Iterator
 from dataclasses import dataclass, field
 
-from chadwickpy.file import BUFSIZE, CFile, StrTok, cw_atoi
+from chadwickpy.file import BUFSIZE, CFile, Tokenizer, cw_atoi
 
 log = logging.getLogger("chadwickpy")
 
@@ -237,7 +237,7 @@ def _warn_invalid_record(game: Game, line: str) -> None:
     log.warning("WARNING: In %s, skipping invalid record:\n         %s", game.game_id, line)
 
 
-def _tokens(tok: StrTok, stop_blank: bool, stop_space: bool) -> list[str | None]:
+def _tokens(tok: Tokenizer, stop_blank: bool, stop_space: bool) -> list[str | None]:
     """The ``data[256]`` loops of ``cw_game_read``: tokens up to the terminating one.
 
     Returns the tokens before the terminator, or all 256 (so the caller can tell the
@@ -258,14 +258,14 @@ def _tokens(tok: StrTok, stop_blank: bool, stop_space: bool) -> list[str | None]
 
 def read_game(file: CFile) -> Game | None:
     """``cw_game_read``: the next game, or ``None`` at the end of the file or on a bad header."""
-    tok = StrTok()
+    tok = Tokenizer()
     bat_hand, bat_hand_batter = " ", ""
     pit_hand, pit_hand_pitcher = " ", ""
     auto_runner = ""
     presadj = ["", "", "", ""]
     ladj_align = ladj_slot = auto_base = 0
 
-    buf = file.fgets(BUFSIZE)
+    buf = file.getline()
     if buf is None:
         return None
     first = tok(buf)
@@ -277,14 +277,10 @@ def read_game(file: CFile) -> Game | None:
     else:
         return None
 
-    while not file.eof:
+    while True:
         filepos = file.getpos()
-        buf = file.fgets(BUFSIZE)
+        buf = file.getline()
         if buf is None:
-            if file.eof:
-                break
-            return None
-        if file.eof:
             break
 
         line = buf
@@ -471,9 +467,9 @@ def read_game(file: CFile) -> Game | None:
                 if 1 <= base <= 3:
                     presadj[base] = pitcher[: BUFSIZE - 1]
                 else:
-                    _warn_invalid_record(game, line)
+                    _warn_invalid_record(game, tok.line_text())
         else:
-            _warn_invalid_record(game, line)
+            _warn_invalid_record(game, tok.line_text())
 
     return game
 
