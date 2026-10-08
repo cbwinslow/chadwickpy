@@ -38,6 +38,12 @@ adds `-j`/`--jobs`/`CHADWICK_JOBS`. Dates shorter than ten characters are the ex
 tests record both outputs so any change shows. Real seasons are unaffected (byte-identical).
 **Revisit if:** a user needs the exact C output on such input.
 
+**Scoped exception (2026-10-08).** Where the C result itself is not stable because it reads an
+uninitialised variable (an unreadable date: a crash on one machine, output on another, seen in CI), a
+test cannot record the C's output as a reference. Those cases assert only that the port refuses the
+input (`test_cwbox_unreadable_date_is_refused`, `test_unreadable_date_is_refused` and the `KNOWN`
+date cases in `tests/test_game_targeted_differential.py`). Every other case still compares both outputs.
+
 ## ADR-002: SportsML output (`cwbox -S`) is deprecated
 
 **Decision (2026-10-07, owner direction).** The SportsML box-score format is labelled deprecated.
